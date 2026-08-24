@@ -39,7 +39,7 @@ $expectedPointFix = 'hit_point = om.MPoint(hit[0])'
 if (-not $installedPaintContextText.Contains($expectedPointFix)) {
     throw "The MFloatPoint to MPoint conversion fix was not found after installation."
 }
-foreach ($requiredTool in @("preview.py", "bridge.py")) {
+foreach ($requiredTool in @("preview.py", "bridge.py", "graph_setup.py")) {
     if (-not (Test-Path (Join-Path $destinationPackage $requiredTool))) {
         throw "The 0.2.0 Python tool was not installed: $requiredTool"
     }
@@ -58,8 +58,17 @@ if ($installedPreviewText.Contains("mesh.setVertexColors(colors, vertex_ids, COL
 if (-not $installedPreviewText.Contains("mesh.setCurrentColorSetName(COLOR_SET)")) {
     throw "The Maya 2026 current color-set selection fix was not found after installation."
 }
+$installedUiText = [IO.File]::ReadAllText($installedUi)
+if (-not $installedUiText.Contains("Create Sample Graph + Visible Pattern")) {
+    throw "The Preview 4 visible sample button was not found after installation."
+}
+$installedGraphSetup = Join-Path $destinationPackage "graph_setup.py"
+$installedGraphSetupText = [IO.File]::ReadAllText($installedGraphSetup)
+if (-not $installedGraphSetupText.Contains('("pattern", "array<float>")')) {
+    throw "The Preview 4 sample graph pattern output was not found after installation."
+}
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
-Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 3 Python update installed successfully."
+Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 4 Python update installed successfully."
 Write-Host "Python backup: $backupDestination"
 Write-Host "The existing native Bifrost pack was preserved."

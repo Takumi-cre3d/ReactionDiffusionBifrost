@@ -31,3 +31,8 @@ def refresh_preview(graph=None, width=64, height=64, normalize=False):
 def sync_seeds(graph=None):
     from .bridge import sync_painted_seeds
     return sync_painted_seeds(graph)
+
+
+def create_preview_graph(width=64, height=64, substeps=120):
+    from .graph_setup import create_preview_graph as create_graph
+    return create_graph(width, height, substeps)

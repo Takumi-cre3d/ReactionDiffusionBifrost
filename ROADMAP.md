@@ -10,7 +10,7 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 - [x] 過去スナップショットをGit追跡から除外
 - [x] C++ / Pythonのローカル回帰テスト
 - [x] CI、設計文書、Contributionガイドを追加
-- [ ] Maya 2026 / Bifrost 2.15でクリーンインストール再検証
+- [x] Maya 2026 / Bifrost 2.15でクリーンインストール再検証
 
 ## Milestone 1 — Stateful 2D node
 
@@ -22,6 +22,7 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 - [x] CUDA優先Auto dispatchと2D ping-pong kernel source
 - [x] RTX 4070 Ti SUPERでCPU/CUDA数値一致と1024² benchmarkを検証
 - [x] Maya 2026 / Bifrost 2.15でCUDA Native Operator実評価と異常入力封じ込めを検証
+- [x] 中央Seed入りGraph、pattern出力、頂点カラー表示のワンクリックサンプル
 - [ ] A/BをGPU常駐StateにしてOperator間のHost転送を除去
 
 ## Milestone 2 — Volume solver

@@ -1,30 +1,21 @@
-"""Maya/Bifrost integration check for the installed CUDA operator pack.
-
-Run with Maya 2026 mayapy after building and installing the Bifrost pack. The
-test creates an unsaved temporary bifrostBoard, evaluates a small grid, and
-checks that Backend::Auto selected the native CUDA implementation.
-"""
+"""Maya/Bifrost end-to-end check for the visible CUDA sample graph."""
 
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 
 import maya.standalone
 
-
-def _add_node(cmds, graph: str, namespace: str, node_type: str) -> str:
-    created = cmds.vnnCompound(
-        graph,
-        ".",
-        addNode=f"BifrostGraph,{namespace},{node_type}",
-    )
-    if not created:
-        raise RuntimeError(f"Bifrost did not create {namespace}::{node_type}.")
-    return str(created[-1])
-
-
-def _set_default(cmds, graph: str, node: str, port: str, value: str) -> None:
-    cmds.vnnNode(graph, f".{node}", setPortDefaultValues=(port, value))
+SCRIPT_PATH = Path(globals().get(
+    "__file__", Path.cwd() / "tests" / "test_maya_bifrost_cuda.py"
+)).resolve()
+ROOT = SCRIPT_PATH.parents[1]
+PACKAGE_ROOT = Path(os.environ.get(
+    "RD_TEST_PACKAGE_ROOT",
+    ROOT / "maya_module" / "ReactionDiffusionBifrost" / "0.2.0" / "scripts",
+))
 
 
 def main() -> None:
@@ -34,63 +25,21 @@ def main() -> None:
     try:
         import maya.cmds as cmds
 
-        print("integrationPhase=load_plugins", flush=True)
-        if not cmds.pluginInfo("bifrostGraph", query=True, loaded=True):
-            cmds.loadPlugin("bifrostGraph")
-        if not cmds.pluginInfo("mayaVnnPlugin", query=True, loaded=True):
-            cmds.loadPlugin("mayaVnnPlugin")
+        sys.path.insert(0, str(PACKAGE_ROOT))
+        from reaction_diffusion_bifrost import bridge, graph_setup, preview
 
-        print("integrationPhase=create_graph", flush=True)
-        graph = cmds.createNode("bifrostBoard", name="rdCudaIntegrationTest")
-        if "output" not in (cmds.vnnCompound(graph, ".", listNodes=True) or []):
-            cmds.vnnCompound(graph, ".", addIONode=False)
+        print("integrationPhase=create_visible_sample", flush=True)
+        created = graph_setup.create_preview_graph(width=64, height=48, substeps=120)
+        graph = created["graph"]
+        step = created["step_node"]
 
-        print("integrationPhase=create_nodes", flush=True)
-        namespace = "Takumi::ReactionDiffusion"
-        initialize = _add_node(
-            cmds, graph, namespace, "reaction_diffusion_initialize_grid"
-        )
-        step = _add_node(cmds, graph, namespace, "reaction_diffusion_grid_step")
+        print("integrationPhase=evaluate_pattern", flush=True)
+        values = preview.read_pattern(graph)
+        if len(values) != 64 * 48:
+            raise AssertionError(f"Unexpected pattern size: {len(values)}")
+        if max(values) - min(values) <= 1.0e-5:
+            raise AssertionError("The centered sample seed produced a uniform pattern.")
 
-        print("integrationPhase=configure_nodes", flush=True)
-        for node in (initialize, step):
-            _set_default(cmds, graph, node, "width", "64")
-            _set_default(cmds, graph, node, "height", "48")
-        for port, value in (
-            ("feed_rate", "0.055"),
-            ("kill_rate", "0.062"),
-            ("diffusion_a", "1.0"),
-            ("diffusion_b", "0.5"),
-            ("time_step", "1.0"),
-        ):
-            _set_default(cmds, graph, step, port, value)
-        _set_default(cmds, graph, step, "substeps", "8")
-        _set_default(cmds, graph, step, "seed_u", "{0.37}")
-        _set_default(cmds, graph, step, "seed_v", "{0.61}")
-        _set_default(cmds, graph, step, "seed_radius", "{0.08}")
-        _set_default(cmds, graph, step, "seed_strength", "{1.0}")
-        _set_default(cmds, graph, step, "seed_mode", "{0}")
-
-        print("integrationPhase=connect_nodes", flush=True)
-        cmds.vnnConnect(
-            graph,
-            f".{initialize}.concentration_a",
-            f".{step}.concentration_a",
-        )
-        cmds.vnnConnect(
-            graph,
-            f".{initialize}.concentration_b",
-            f".{step}.concentration_b",
-        )
-        for port, data_type in (
-            ("backend_used", "string"),
-            ("status", "string"),
-            ("elapsed_milliseconds", "float"),
-        ):
-            cmds.vnnNode(graph, ".output", createInputPort=(port, data_type))
-            cmds.vnnConnect(graph, f".{step}.{port}", f".output.{port}")
-
-        print("integrationPhase=evaluate", flush=True)
         backend = cmds.getAttr(f"{graph}.backend_used")
         status = cmds.getAttr(f"{graph}.status")
         elapsed = float(cmds.getAttr(f"{graph}.elapsed_milliseconds"))
@@ -100,14 +49,39 @@ def main() -> None:
             raise AssertionError(f"Unexpected CUDA status: {status!r}")
         if elapsed < 0.0:
             raise AssertionError(f"Invalid elapsed time: {elapsed}")
-        print("ReactionDiffusion Maya/Bifrost CUDA integration: PASS")
+        print("integrationPhase=create_viewport_preview", flush=True)
+        transform = preview.update_preview(graph, width=64, height=48, normalize=True)
+        shape = cmds.listRelatives(transform, shapes=True, fullPath=True)[0]
+        color_sets = cmds.polyColorSet(shape, query=True, allColorSets=True) or []
+        if preview.COLOR_SET not in color_sets:
+            raise AssertionError(f"Preview color set is missing: {color_sets!r}")
+        mesh = preview.om.MFnMesh(preview._mesh_dag_path(shape))
+        colors = mesh.getVertexColors(preview.COLOR_SET)
+        unique_colors = {
+            (round(color.r, 5), round(color.g, 5), round(color.b, 5)) for color in colors
+        }
+        if len(colors) != 64 * 48 or len(unique_colors) < 2:
+            raise AssertionError("The preview mesh does not contain varying vertex colors.")
+
+        print("integrationPhase=advance_sample", flush=True)
+        advanced = bridge.evaluate(
+            graph, width=64, height=48, total_steps=135,
+            normalize=True, sync_seeds=False,
+        )
+        advanced_values = preview.read_pattern(graph)
+        if advanced["steps"] != 135 or max(advanced_values) - min(advanced_values) <= 1.0e-5:
+            raise AssertionError("Advancing the sample did not retain its centered seed.")
+
+        print("ReactionDiffusion Maya/Bifrost visible CUDA sample: PASS")
         print(f"backendUsed={backend}")
         print(f"status={status}")
         print(f"elapsedMilliseconds={elapsed:.6f}")
+        print(f"patternRange={min(values):.6f}..{max(values):.6f}")
+        print(f"previewMesh={transform}")
 
         # Invalid node values must become diagnostic outputs, never an
         # exception escaping the Bifrost ABI and terminating Maya.
-        _set_default(cmds, graph, step, "time_step", "0.0")
+        cmds.vnnNode(graph, step, setPortDefaultValues=("time_step", "0.0"))
         cmds.dgdirty(graph)
         invalid_backend = cmds.getAttr(f"{graph}.backend_used")
         invalid_status = cmds.getAttr(f"{graph}.status")

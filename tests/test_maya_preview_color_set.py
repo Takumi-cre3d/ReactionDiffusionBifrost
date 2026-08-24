@@ -13,7 +13,10 @@ os.environ.setdefault("MAYA_SKIP_USERSETUP_PY", "1")
 import maya.standalone
 
 
-ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_PATH = Path(globals().get(
+    "__file__", Path.cwd() / "tests" / "test_maya_preview_color_set.py"
+)).resolve()
+ROOT = SCRIPT_PATH.parents[1]
 PACKAGE_ROOT = Path(os.environ.get(
     "RD_TEST_PACKAGE_ROOT",
     ROOT / "maya_module" / "ReactionDiffusionBifrost" / "0.2.0" / "scripts",
@@ -21,7 +24,9 @@ PACKAGE_ROOT = Path(os.environ.get(
 
 
 def main() -> None:
-    maya.standalone.initialize(name="python")
+    maya_already_initialized = os.environ.get("RD_MAYA_ALREADY_INITIALIZED") == "1"
+    if not maya_already_initialized:
+        maya.standalone.initialize(name="python")
     try:
         import maya.cmds as cmds
 
@@ -54,7 +59,8 @@ def main() -> None:
             raise RuntimeError("Vertex colors were not written to the preview color set.")
         print("Maya preview color-set creation and vertex-write integration test: PASS")
     finally:
-        maya.standalone.uninitialize()
+        if not maya_already_initialized:
+            maya.standalone.uninitialize()
 
 
 if __name__ == "__main__":

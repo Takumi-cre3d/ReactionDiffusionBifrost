@@ -7,7 +7,7 @@ Maya 2026 / Bifrost 2.15向けの、Gray–Scott反応拡散シミュレーシ�
 ## 現在地
 
 `0.2.0-preview2`を引き継ぎ元の正本としてリポジトリ化し、現在は
-`0.2.0-preview3`を開発しています。最終的な高速実行経路はCUDAを第一候補とし、
+`0.2.0-preview4`を開発しています。最終的な高速実行経路はCUDAを第一候補とし、
 CPU実装は数値参照・fallback・CUDAを持たない環境向けとして維持します。
 
 - C++17のGray–Scott CPUソルバー（OpenMP対応）
@@ -17,6 +17,7 @@ CPU実装は数値参照・fallback・CUDAを持たない環境向けとして�
 - Periodic / NoFlux / FixedInitial境界
 - UV Seed PainterとBifrost配列の同期
 - Maya頂点カラーによる非破壊プレビュー
+- 中央Seed入りBifrost Graphと可視プレビューのワンクリック生成
 - 決定論的なReset / Step操作
 - C++単体テストとMaya非依存Python回帰テスト
 
@@ -44,6 +45,10 @@ Maya Script EditorのPythonタブからUIを起動します。
 import reaction_diffusion_bifrost
 reaction_diffusion_bifrost.show()
 ```
+
+UIの`Create Sample Graph + Visible Pattern`を押すと、中央Seedを持つネイティブ
+Bifrost Graph、`pattern`出力、頂点カラープレビューをまとめて作成します。
+Watchpointは配列の評価確認用であり、それ単独ではビューポート表示を作成しません。
 
 詳しい使用方法と既存Bifrostグラフの構成は[日本語ガイド](README_JA.md)、設計境界は[Architecture](docs/ARCHITECTURE.md)、開発順序は[Roadmap](ROADMAP.md)を参照してください。
 

@@ -1,4 +1,4 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 3
+# ReactionDiffusionBifrost 0.2.0 Preview 4
 
 Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 ネイティブBifrost Solverに加え、Seed Painter、Painter→Bifrost同期、
@@ -6,6 +6,12 @@ Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 
 本ツールの最終的な高速実行backendはCUDAを第一候補とします。CPUは数値参照、
 fallback、CUDA非搭載環境のために維持します。
+
+## 0.2.0 Preview 4の追加内容
+
+- `Create Sample Graph + Visible Pattern`で中央Seed入りBifrost Graphを自動生成
+- `pattern`とCUDA診断出力を自動公開し、頂点カラー平面までワンクリック表示
+- Maya 2026 / Bifrost 2.15 / CUDA実機統合テストで数値配列と表示色を検証
 
 ## 0.2.0 Preview 3の追加内容
 
@@ -94,7 +100,19 @@ import reaction_diffusion_bifrost
 reaction_diffusion_bifrost.show()
 ```
 
-## 最短の表示手順
+## 最短の表示手順（サンプル）
+
+1. UI上部の`Create Sample Graph + Visible Pattern`を押します。
+2. `RD_SimulationPreview`が選択され、中央Seedから発達した模様が表示されます。
+3. `Step + Preview`で`Total Steps`を増やし、模様を更新します。
+
+この操作は、`reaction_diffusion_initialize_grid`と
+`reaction_diffusion_grid_step`、中央Seed、トップレベルの`pattern`および診断出力を
+持つ`RD_ReactionDiffusionGraph`を作ります。計算はネイティブOperatorで行い、
+開発機では`backend_used = CUDA`になることを実機確認済みです。
+サンプル作成後の`Step + Preview`と`Reset`は中央Seedを保持します。
+
+## 既存グラフとPainterを使う手順
 
 1. `Use Latest`で対象Bifrost Graphを設定します。
 2. Graphと同じ`Width` / `Height`を設定します。初期値は64×64です。
@@ -114,6 +132,11 @@ Bifrostのfloat配列のままなので、後続ノードによるメッシュ�
 テクスチャ変換を妨げません。
 
 `Normalize preview contrast`は表示のみを正規化します。数値結果は変更しません。
+
+Watchpointに評価値が表示されても、Bifrostの`array<float>`が自動的にMayaの
+ビューポート形状へ変換されるわけではありません。これは正常な挙動です。
+表示にはトップレベル`pattern`出力と`Refresh Existing Output`、または上記の
+サンプル作成ボタンを使用します。Seedが空ならpatternは一様になり、模様も現れません。
 
 ## Stepの現在の方式
 
@@ -137,10 +160,17 @@ rd.refresh_preview(width=64, height=64)
 rd.sync_seeds()
 ```
 
+中央Seed入りサンプルグラフだけをPythonから作成することもできます。
+
+```python
+graph = rd.create_preview_graph(width=64, height=64, substeps=120)
+rd.refresh_preview(graph["graph"], width=64, height=64, normalize=True)
+```
+
 ## 現在の制限
 
 - 検証済みSolver領域は2D / UVグリッドです。3D Volumeはdense CPU実装の実機検証前、メッシュ表面Laplace–Beltramiは未実装です。
-- 2D CUDA kernelは実装済みですが、開発機にCUDA Toolkit / `nvcc`がないため未コンパイルです。現在インストール済みPackの実行BackendはCPUです。
+- 2D CUDA kernelはCUDA Toolkit 12.6、RTX 4070 Ti SUPER、Maya 2026 / Bifrost 2.15で実機検証済みです。CUDAを利用できない環境ではCPUへfallbackします。
 - シードポートが別ノードから接続済みの場合、UIは上書きせず警告を返します。
 - PreviewはMayaの頂点カラー表示で、入力メッシュへのUVテクスチャ投影は次段階です。
 - Deforming SurfaceやUVシーム接続は未実装です。
@@ -149,7 +179,7 @@ rd.sync_seeds()
 
 1. A/B配列をBifrost Simulation Stateとして保持するFeedback Compound
 2. `pattern`の入力メッシュUVへの直接表示／ベイク
-3. CUDA Toolkit導入後の2D kernel実機コンパイル、CPU数値比較、benchmark
+3. CUDA A/B StateのGPU常駐化とHost転送の削減
 4. Surface SolverとVolume Solver
 
 ## ビルド安全策

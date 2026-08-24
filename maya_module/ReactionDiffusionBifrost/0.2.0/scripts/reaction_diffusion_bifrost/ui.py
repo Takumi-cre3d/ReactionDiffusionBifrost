@@ -6,7 +6,7 @@ import json
 
 import maya.cmds as cmds
 
-from . import bridge, paint_context, payload, preview
+from . import bridge, graph_setup, paint_context, payload, preview
 
 
 WINDOW = "reactionDiffusionBifrostWindow"
@@ -115,16 +115,45 @@ def _refresh_preview(*_args) -> None:
         cmds.warning(f"ReactionDiffusion: {exception}")
 
 
+def _create_sample_graph(*_args) -> None:
+    try:
+        settings = _simulation_settings()
+        sample_steps = max(120, settings["steps"])
+        cmds.intField(CONTROLS["total_steps"], edit=True, value=sample_steps)
+        created = graph_setup.create_preview_graph(
+            settings["width"], settings["height"], sample_steps)
+        graph = created["graph"]
+        cmds.textField(CONTROLS["graph"], edit=True, text=graph)
+        mesh = preview.update_preview(
+            graph, settings["width"], settings["height"], True)
+        backend = cmds.getAttr(f"{graph}.backend_used")
+        status = cmds.getAttr(f"{graph}.status")
+        elapsed = float(cmds.getAttr(f"{graph}.elapsed_milliseconds"))
+        cmds.select(mesh, replace=True)
+        try:
+            cmds.viewFit()
+        except RuntimeError:
+            pass
+        _status(
+            f"Sample visible: {mesh}    {backend} / {elapsed:.3f} ms    {status}")
+    except (RuntimeError, ValueError) as exception:
+        cmds.warning(f"ReactionDiffusion: {exception}")
+        _status("Sample graph creation failed. See Script Editor for details.")
+
+
 def _step(*_args) -> None:
     increment = cmds.intField(CONTROLS["step_size"], query=True, value=True)
     current = cmds.intField(CONTROLS["total_steps"], query=True, value=True)
     cmds.intField(CONTROLS["total_steps"], edit=True, value=max(0, current + increment))
-    _evaluate(sync_seeds=True)
+    # Advancing an auto-created sample must retain its centered seed. Painter
+    # data is synchronized when it contains samples; the explicit Sync button
+    # remains available when an empty payload should clear all graph seeds.
+    _evaluate(sync_seeds=payload.counts()[1] > 0)
 
 
 def _reset(*_args) -> None:
     cmds.intField(CONTROLS["total_steps"], edit=True, value=0)
-    _evaluate(sync_seeds=True)
+    _evaluate(sync_seeds=payload.counts()[1] > 0)
 
 
 def _delete_preview(*_args) -> None:
@@ -179,7 +208,7 @@ def show():
     CONTROLS.clear()
     window = cmds.window(
         WINDOW,
-        title="Reaction Diffusion Controller 0.2.0 Preview 3",
+        title="Reaction Diffusion Controller 0.2.0 Preview 4",
         sizeable=True,
         widthHeight=(480, 720),
     )
@@ -214,6 +243,11 @@ def show():
     CONTROLS["graph"] = cmds.textField(placeholderText="bifrostGraphShape")
     cmds.button(label="Use Latest", command=_use_latest_graph)
     cmds.setParent("..")
+    cmds.button(
+        label="Create Sample Graph + Visible Pattern",
+        height=38,
+        command=_create_sample_graph,
+        annotation="Creates a centered sample seed, exposes pattern, and frames a colored preview.")
     cmds.rowLayout(numberOfColumns=4, adjustableColumn=4, columnWidth4=(65, 95, 65, 95))
     cmds.text(label="Width", align="right")
     CONTROLS["width"] = cmds.intField(value=64, minValue=3)
@@ -223,7 +257,7 @@ def show():
     cmds.button(label="Refresh Existing Output", height=32, command=_refresh_preview)
     cmds.rowLayout(numberOfColumns=4, adjustableColumn=4, columnWidth4=(75, 90, 75, 90))
     cmds.text(label="Total Steps", align="right")
-    CONTROLS["total_steps"] = cmds.intField(value=15, minValue=0)
+    CONTROLS["total_steps"] = cmds.intField(value=120, minValue=0)
     cmds.text(label="Step +", align="right")
     CONTROLS["step_size"] = cmds.intField(value=15, minValue=1)
     cmds.setParent("..")

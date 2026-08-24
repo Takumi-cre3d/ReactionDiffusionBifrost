@@ -93,6 +93,16 @@ def main() -> None:
     ui_source = (PACKAGE_ROOT / "reaction_diffusion_bifrost" / "ui.py").read_text(encoding="utf-8")
     assert "sizeable=True" in ui_source
     assert "cmds.scrollLayout(childResizable=True" in ui_source
+    assert 'label="Create Sample Graph + Visible Pattern"' in ui_source
+    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 4"' in ui_source
+    graph_setup_source = (
+        PACKAGE_ROOT / "reaction_diffusion_bifrost" / "graph_setup.py"
+    ).read_text(encoding="utf-8")
+    assert '("pattern", "array<float>")' in graph_setup_source
+    assert '("seed_u", "{0.5}")' in graph_setup_source
+    assert '("seed_v", "{0.5}")' in graph_setup_source
+    assert '("substeps", str(substeps))' in graph_setup_source
+    assert '_evaluate(sync_seeds=payload.counts()[1] > 0)' in ui_source
     preview_source = (PACKAGE_ROOT / "reaction_diffusion_bifrost" / "preview.py").read_text(
         encoding="utf-8"
     )
@@ -121,7 +131,7 @@ def main() -> None:
     hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
         encoding="utf-8"
     )
-    assert "Preview 3 Python update installed successfully" in hotfix_source
+    assert "Preview 4 Python update installed successfully" in hotfix_source
     assert "unsupported Maya 2026 createColorSetWithName" in hotfix_source
     print("ReactionDiffusion Maya Python helper tests: PASS")
 
