@@ -1,4 +1,4 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 4
+# ReactionDiffusionBifrost 0.2.0 Preview 5
 
 Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 ネイティブBifrost Solverに加え、Seed Painter、Painter→Bifrost同期、
@@ -6,6 +6,15 @@ Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 
 本ツールの最終的な高速実行backendはCUDAを第一候補とします。CPUは数値参照、
 fallback、CUDA非搭載環境のために維持します。
+
+## 0.2.0 Preview 5の追加内容
+
+- `reaction_diffusion_initialize_state`で中央Seed入りPacked Stateを生成
+- `reaction_diffusion_state_step`で`[A..., B...]`を明示入出力し、CUDAで増分計算
+- `reaction_diffusion_state_outputs`でStateをA/B、pattern、UV gradientへ展開
+- Autodesk標準Feedback Portを使う`Create Stateful Playback Graph`を追加
+- Mayaタイムラインの連続フレームでStateを継続し、開始フレームで正確にReset
+- UIを開いている間、タイムライン変更に合わせて頂点カラープレビューを更新
 
 ## 0.2.0 Preview 4の追加内容
 
@@ -63,7 +72,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\scripts\install_all.ps1 -MayaVersion 2026 -Configuration Release
 ```
 
-7項目が`PASS`になり、最後に次が表示されれば成功です。
+8ファイルとFeedback State Operator定義が`PASS`になり、最後に次が表示されれば成功です。
 
 ```text
 ReactionDiffusionBifrost 0.2.0 installation completed successfully.
@@ -124,6 +133,21 @@ reaction_diffusion_bifrost.show()
 
 `Auto sync and preview after each painted stroke`がオンなら、手順5は自動です。
 
+## Stateful Playbackの手順
+
+1. `Width` / `Height`と`Step +`（1フレーム当たりのsubstep数）を設定します。
+2. `Create Stateful Playback Graph`を押します。
+3. Mayaタイムラインを再生するか、`Step + Preview`で1フレーム進めます。
+4. `Reset`を押すとPlayback Rangeの開始フレームへ戻り、中央Seedの初期Stateになります。
+
+このグラフではA/Bを1本の`array<float>`へ`[A..., B...]`の順で格納します。
+Native Operatorは隠れたグローバル状態を持たず、Bifrost Feedback Portがフレーム間Stateを
+所有します。`state`、`concentration_a`、`concentration_b`、`pattern`、
+`gradient_u/v`はトップレベル出力なので、既存Bifrostノードへ接続できます。
+
+UIを閉じても数値StateはBifrost側で評価されますが、Maya頂点カラーメッシュの自動更新は
+UIの`timeChanged` callbackを使用するため、可視プレビュー再生時はUIを開いてください。
+
 ## Previewの意味
 
 `RD_SimulationPreview`はUV 0–1グリッドを表す表示専用ポリゴン平面です。
@@ -140,10 +164,10 @@ Watchpointに評価値が表示されても、Bifrostの`array<float>`が自動�
 
 ## Stepの現在の方式
 
-Preview 2の`Step + Preview`は、`Total Steps`を増やして初期グリッドから再計算します。
+通常サンプルの`Step + Preview`は、`Total Steps`を増やして初期グリッドから再計算します。
 同じシードとパラメーターなら同じ結果になるため、数値検証とUndoが簡単です。
-長時間計算では再計算量が増えるため、次段階でA/Bをフレーム間Stateとして保持する
-Simulation Compoundへ置き換えます。
+`Create Stateful Playback Graph`ではFeedback Stateから1フレーム分だけ増分計算するため、
+この全履歴再計算は発生しません。通常サンプルは数値比較と任意ステップ直接評価用として残します。
 
 ## 直接Pythonから使用
 
@@ -167,17 +191,27 @@ graph = rd.create_preview_graph(width=64, height=64, substeps=120)
 rd.refresh_preview(graph["graph"], width=64, height=64, normalize=True)
 ```
 
+Stateful GraphもPythonから作成できます。
+
+```python
+graph = rd.create_stateful_preview_graph(
+    width=64, height=64, substeps_per_frame=15, start_frame=1
+)
+```
+
 ## 現在の制限
 
 - 検証済みSolver領域は2D / UVグリッドです。3D Volumeはdense CPU実装の実機検証前、メッシュ表面Laplace–Beltramiは未実装です。
 - 2D CUDA kernelはCUDA Toolkit 12.6、RTX 4070 Ti SUPER、Maya 2026 / Bifrost 2.15で実機検証済みです。CUDAを利用できない環境ではCPUへfallbackします。
 - シードポートが別ノードから接続済みの場合、UIは上書きせず警告を返します。
+- Stateful Graphの初期版は中央Seedで開始します。Painterのフレーム別注入は次段階です。
+- Packed StateはBifrost Feedback化済みですが、CUDA bufferはまだOperator呼び出し間でGPU常駐せずHost転送が残ります。
 - PreviewはMayaの頂点カラー表示で、入力メッシュへのUVテクスチャ投影は次段階です。
 - Deforming SurfaceやUVシーム接続は未実装です。
 
 ## 次段階
 
-1. A/B配列をBifrost Simulation Stateとして保持するFeedback Compound
+1. Painter SeedのStateful Graphへのフレーム別注入
 2. `pattern`の入力メッシュUVへの直接表示／ベイク
 3. CUDA A/B StateのGPU常駐化とHost転送の削減
 4. Surface SolverとVolume Solver
@@ -191,7 +225,7 @@ rd.refresh_preview(graph["graph"], width=64, height=64, normalize=True)
 - Operator関数のDLL export宣言と`dumpbin`検査
 - build packの固定パス選択
 - インストールDLLのSHA-256一致検査
-- Maya Module、Python、Preview、Bridge、Pack Config、DLL、Operator JSONの7項目検証
+- Maya Module、Python、Preview、Bridge、Graph Builder、Pack Config、DLL、Operator JSONの8項目検証
 
 ## ライセンス
 

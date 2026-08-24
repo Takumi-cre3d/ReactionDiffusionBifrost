@@ -94,6 +94,41 @@ struct GridState {
     }
 };
 
+// Feedback compounds cache a single value between graph executions. Keep A
+// and B in one explicit array so the state can be connected as one Bifrost
+// feedback port without hidden native globals. Layout is [A0..An, B0..Bn].
+inline std::vector<float> pack_grid_state(const GridState& state) {
+    if (!state.valid()) {
+        throw std::invalid_argument("Invalid reaction-diffusion state.");
+    }
+    if (state.size() > std::numeric_limits<std::size_t>::max() / 2) {
+        throw std::overflow_error("Packed reaction-diffusion state size overflow.");
+    }
+    std::vector<float> packed;
+    packed.reserve(state.size() * 2);
+    packed.insert(packed.end(), state.a.begin(), state.a.end());
+    packed.insert(packed.end(), state.b.begin(), state.b.end());
+    return packed;
+}
+
+inline GridState unpack_grid_state(
+    const std::vector<float>& packed,
+    std::size_t width,
+    std::size_t height) {
+    GridState state(width, height);
+    const std::size_t count = state.size();
+    if (count > std::numeric_limits<std::size_t>::max() / 2) {
+        throw std::overflow_error("Packed reaction-diffusion state size overflow.");
+    }
+    if (packed.size() != count * 2) {
+        throw std::invalid_argument(
+            "Packed state length must equal 2 * width * height.");
+    }
+    state.a.assign(packed.begin(), packed.begin() + static_cast<std::ptrdiff_t>(count));
+    state.b.assign(packed.begin() + static_cast<std::ptrdiff_t>(count), packed.end());
+    return state;
+}
+
 struct StepResult {
     Backend requested_backend = Backend::CPU;
     Backend actual_backend = Backend::CPU;

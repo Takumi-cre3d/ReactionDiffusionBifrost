@@ -102,6 +102,31 @@ void test_output_sizes() {
     require(gradient_v.size() == state.size(), "V gradient output size mismatch.");
 }
 
+void test_packed_state_incremental_equivalence() {
+    RD::GridState direct(48, 40);
+    RD::GridState incremental(48, 40);
+    RD::Parameters parameters;
+    RD::SeedSample seed;
+    seed.u = 0.41f;
+    seed.v = 0.57f;
+    seed.radius = 0.07f;
+    RD::step(direct, parameters, {seed}, RD::BoundaryMode::Periodic, 90, RD::Backend::CPU);
+    RD::step(incremental, parameters, {seed}, RD::BoundaryMode::Periodic, 45, RD::Backend::CPU);
+    incremental = RD::unpack_grid_state(
+        RD::pack_grid_state(incremental), incremental.width, incremental.height);
+    RD::step(incremental, parameters, {}, RD::BoundaryMode::Periodic, 45, RD::Backend::CPU);
+    require(direct.a == incremental.a && direct.b == incremental.b,
+            "Packed feedback state changed the incremental result.");
+
+    bool rejected = false;
+    try {
+        RD::unpack_grid_state(std::vector<float>(12, 0.0f), 8, 8);
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    require(rejected, "Invalid packed state length was not rejected.");
+}
+
 void test_cuda_fallback_contract() {
 #if !defined(RD_HAS_CUDA)
     require(!RD::cuda_backend_compiled(), "CPU-only build incorrectly reports compiled CUDA.");
@@ -247,6 +272,7 @@ int main() {
         test_deterministic_result();
         test_erase_seed();
         test_output_sizes();
+        test_packed_state_incremental_equivalence();
         test_cuda_fallback_contract();
         test_cuda_matches_cpu_when_available();
         test_uniform_volume_is_stationary();

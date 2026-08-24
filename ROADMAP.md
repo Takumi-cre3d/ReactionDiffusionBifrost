@@ -14,7 +14,7 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 
 ## Milestone 1 — Stateful 2D node
 
-- Bifrost Simulation StateでA/Bを保持し、毎Stepの全履歴再計算を解消
+- [x] Bifrost Feedback StateでA/Bを保持し、毎Stepの全履歴再計算を解消
 - Web版のMitosis / Coral / Spots / Stripes / WormsプリセットをCompoundとして提供
 - 入力メッシュUVへの直接プレビュー／ベイク
 - UVシームを跨ぐ接続方針とテストデータを確定
@@ -23,6 +23,8 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 - [x] RTX 4070 Ti SUPERでCPU/CUDA数値一致と1024² benchmarkを検証
 - [x] Maya 2026 / Bifrost 2.15でCUDA Native Operator実評価と異常入力封じ込めを検証
 - [x] 中央Seed入りGraph、pattern出力、頂点カラー表示のワンクリックサンプル
+- [x] Packed State Native Operatorとタイムライン駆動Feedback Graph
+- [ ] Painter SeedをStateful Graphへフレーム別に注入
 - [ ] A/BをGPU常駐StateにしてOperator間のHost転送を除去
 
 ## Milestone 2 — Volume solver

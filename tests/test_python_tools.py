@@ -94,7 +94,9 @@ def main() -> None:
     assert "sizeable=True" in ui_source
     assert "cmds.scrollLayout(childResizable=True" in ui_source
     assert 'label="Create Sample Graph + Visible Pattern"' in ui_source
-    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 4"' in ui_source
+    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 5"' in ui_source
+    assert 'label="Create Stateful Playback Graph"' in ui_source
+    assert 'event=("timeChanged", _refresh_on_time_changed)' in ui_source
     graph_setup_source = (
         PACKAGE_ROOT / "reaction_diffusion_bifrost" / "graph_setup.py"
     ).read_text(encoding="utf-8")
@@ -102,6 +104,12 @@ def main() -> None:
     assert '("seed_u", "{0.5}")' in graph_setup_source
     assert '("seed_v", "{0.5}")' in graph_setup_source
     assert '("substeps", str(substeps))' in graph_setup_source
+    assert "def create_stateful_preview_graph(" in graph_setup_source
+    assert '"Simulation::Common", "simulation_example"' in graph_setup_source
+    assert 'setPortDataType=(port, "array<float>")' in graph_setup_source
+    assert 'STATE_STEP_TYPE = "reaction_diffusion_state_step"' in graph_setup_source
+    assert "cmds.vnnChangeBracket(graph, open=True)" in graph_setup_source
+    assert "cmds.vnnChangeBracket(graph, close=True)" in graph_setup_source
     assert '_evaluate(sync_seeds=payload.counts()[1] > 0)' in ui_source
     preview_source = (PACKAGE_ROOT / "reaction_diffusion_bifrost" / "preview.py").read_text(
         encoding="utf-8"
@@ -131,8 +139,21 @@ def main() -> None:
     hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
         encoding="utf-8"
     )
-    assert "Preview 4 Python update installed successfully" in hotfix_source
+    assert "Preview 5 Python update installed successfully" in hotfix_source
     assert "unsupported Maya 2026 createColorSetWithName" in hotfix_source
+    native_header = (ROOT / "native" / "bifrost" / "ReactionDiffusion.h").read_text(
+        encoding="utf-8"
+    )
+    for state_operator in (
+        "reaction_diffusion_initialize_state",
+        "reaction_diffusion_state_step",
+        "reaction_diffusion_state_outputs",
+    ):
+        assert state_operator in native_header
+        assert state_operator in build_script_source
+    manifest_source = (ROOT / "SOURCE_MANIFEST.txt").read_text(encoding="utf-8")
+    assert "distributionVersion=0.2.0-preview5" in manifest_source
+    assert "tests/test_maya_bifrost_stateful.py" in manifest_source
     print("ReactionDiffusion Maya Python helper tests: PASS")
 
 

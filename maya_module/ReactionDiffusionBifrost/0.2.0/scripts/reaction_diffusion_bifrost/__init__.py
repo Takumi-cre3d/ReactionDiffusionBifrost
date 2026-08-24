@@ -36,3 +36,8 @@ def sync_seeds(graph=None):
 def create_preview_graph(width=64, height=64, substeps=120):
     from .graph_setup import create_preview_graph as create_graph
     return create_graph(width, height, substeps)
+
+
+def create_stateful_preview_graph(width=64, height=64, substeps_per_frame=15, start_frame=1.0):
+    from .graph_setup import create_stateful_preview_graph as create_graph
+    return create_graph(width, height, substeps_per_frame, start_frame)

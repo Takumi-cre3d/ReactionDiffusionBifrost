@@ -11,6 +11,7 @@ from . import bridge, graph_setup, paint_context, payload, preview
 
 WINDOW = "reactionDiffusionBifrostWindow"
 CONTROLS = {}
+_TIME_REFRESH_BUSY = False
 
 
 def _status(message: str) -> None:
@@ -141,7 +142,60 @@ def _create_sample_graph(*_args) -> None:
         _status("Sample graph creation failed. See Script Editor for details.")
 
 
+def _create_stateful_graph(*_args) -> None:
+    try:
+        settings = _simulation_settings()
+        substeps = cmds.intField(CONTROLS["step_size"], query=True, value=True)
+        start_frame = float(cmds.playbackOptions(query=True, minTime=True))
+        cmds.currentTime(start_frame)
+        created = graph_setup.create_stateful_preview_graph(
+            settings["width"], settings["height"], substeps, start_frame)
+        graph = created["graph"]
+        cmds.textField(CONTROLS["graph"], edit=True, text=graph)
+        mesh = preview.update_preview(
+            graph, settings["width"], settings["height"], True)
+        cmds.select(mesh, replace=True)
+        _status(
+            f"Stateful graph ready at frame {start_frame:g}. "
+            f"Play or step the timeline ({substeps} solver steps/frame).")
+    except (RuntimeError, ValueError) as exception:
+        cmds.warning(f"ReactionDiffusion: {exception}")
+        _status("Stateful graph creation failed. See Script Editor for details.")
+
+
+def _is_stateful_graph(graph: str) -> bool:
+    return bool(graph and cmds.objExists(graph) and cmds.objExists(f"{graph}.state"))
+
+
+def _refresh_on_time_changed() -> None:
+    global _TIME_REFRESH_BUSY
+    if _TIME_REFRESH_BUSY or not CONTROLS.get("graph"):
+        return
+    graph_text = cmds.textField(CONTROLS["graph"], query=True, text=True).strip()
+    if not _is_stateful_graph(graph_text):
+        return
+    _TIME_REFRESH_BUSY = True
+    try:
+        settings = _simulation_settings()
+        mesh = preview.update_preview(
+            graph_text, settings["width"], settings["height"], True)
+        backend = cmds.getAttr(f"{graph_text}.backend_used")
+        _status(
+            f"State frame {cmds.currentTime(query=True):g}: {mesh}    {backend}")
+    except (RuntimeError, ValueError):
+        # Timeline callbacks must not interrupt playback. Full errors remain
+        # available from explicit Refresh/Step operations.
+        pass
+    finally:
+        _TIME_REFRESH_BUSY = False
+
+
 def _step(*_args) -> None:
+    graph = _graph_name()
+    if _is_stateful_graph(graph):
+        cmds.currentTime(cmds.currentTime(query=True) + 1.0)
+        _refresh_on_time_changed()
+        return
     increment = cmds.intField(CONTROLS["step_size"], query=True, value=True)
     current = cmds.intField(CONTROLS["total_steps"], query=True, value=True)
     cmds.intField(CONTROLS["total_steps"], edit=True, value=max(0, current + increment))
@@ -152,6 +206,11 @@ def _step(*_args) -> None:
 
 
 def _reset(*_args) -> None:
+    graph = _graph_name()
+    if _is_stateful_graph(graph):
+        cmds.currentTime(cmds.playbackOptions(query=True, minTime=True))
+        _refresh_on_time_changed()
+        return
     cmds.intField(CONTROLS["total_steps"], edit=True, value=0)
     _evaluate(sync_seeds=payload.counts()[1] > 0)
 
@@ -208,7 +267,7 @@ def show():
     CONTROLS.clear()
     window = cmds.window(
         WINDOW,
-        title="Reaction Diffusion Controller 0.2.0 Preview 4",
+        title="Reaction Diffusion Controller 0.2.0 Preview 5",
         sizeable=True,
         widthHeight=(480, 720),
     )
@@ -248,6 +307,11 @@ def show():
         height=38,
         command=_create_sample_graph,
         annotation="Creates a centered sample seed, exposes pattern, and frames a colored preview.")
+    cmds.button(
+        label="Create Stateful Playback Graph",
+        height=38,
+        command=_create_stateful_graph,
+        annotation="Creates a Bifrost Feedback State simulation driven by the Maya timeline.")
     cmds.rowLayout(numberOfColumns=4, adjustableColumn=4, columnWidth4=(65, 95, 65, 95))
     cmds.text(label="Width", align="right")
     CONTROLS["width"] = cmds.intField(value=64, minValue=3)
@@ -286,6 +350,8 @@ def show():
         align="left")
     cmds.showWindow(window)
     cmds.window(window, edit=True, widthHeight=(480, 720))
+
+    cmds.scriptJob(event=("timeChanged", _refresh_on_time_changed), parent=window)
 
     paint_context.set_stroke_committed_callback(_auto_sync_after_stroke)
     _refresh_counts()

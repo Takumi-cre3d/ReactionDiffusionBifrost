@@ -87,6 +87,53 @@ REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_grid_step(
     float& elapsed_milliseconds)
     AMINO_ANNOTATE("Amino::Node");
 
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_initialize_state(
+    int width,
+    int height,
+    BoundaryMode boundary_mode,
+    Amino::Ptr<FloatArray> const& seed_u,
+    Amino::Ptr<FloatArray> const& seed_v,
+    Amino::Ptr<FloatArray> const& seed_radius,
+    Amino::Ptr<FloatArray> const& seed_strength,
+    Amino::Ptr<IntArray> const& seed_mode,
+    Amino::Ptr<FloatArray>& state)
+    AMINO_ANNOTATE("Amino::Node");
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_state_step(
+    Amino::Ptr<FloatArray> const& state,
+    int width,
+    int height,
+    float feed_rate,
+    float kill_rate,
+    float diffusion_a,
+    float diffusion_b,
+    float time_step,
+    int substeps,
+    BoundaryMode boundary_mode,
+    Backend backend,
+    Amino::Ptr<FloatArray> const& seed_u,
+    Amino::Ptr<FloatArray> const& seed_v,
+    Amino::Ptr<FloatArray> const& seed_radius,
+    Amino::Ptr<FloatArray> const& seed_strength,
+    Amino::Ptr<IntArray> const& seed_mode,
+    Amino::Ptr<FloatArray>& out_state,
+    Amino::String& backend_used,
+    Amino::String& status,
+    float& elapsed_milliseconds)
+    AMINO_ANNOTATE("Amino::Node");
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_state_outputs(
+    Amino::Ptr<FloatArray> const& state,
+    int width,
+    int height,
+    BoundaryMode boundary_mode,
+    Amino::Ptr<FloatArray>& concentration_a,
+    Amino::Ptr<FloatArray>& concentration_b,
+    Amino::Ptr<FloatArray>& pattern,
+    Amino::Ptr<FloatArray>& gradient_u,
+    Amino::Ptr<FloatArray>& gradient_v)
+    AMINO_ANNOTATE("Amino::Node");
+
 REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_initialize_volume(
     int width,
     int height,

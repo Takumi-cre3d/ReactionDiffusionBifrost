@@ -38,6 +38,7 @@ compatibility範囲内であり、MSVC 19.44による実コンパイルも成功
 - CPU/CUDA最大誤差（64×48、80 substep）: `1.72853e-6`
 - `Backend::Auto`: `CUDA` / `auto_selected_cuda`
 - Maya 2026 / Bifrost 2.15 native operator評価: PASS
+- Packed Feedback Stateのフレーム1→2→3増分CUDA評価と開始フレームReset: PASS
 - 不正`time_step=0`: Mayaを終了させず`ERROR` / `error: ...`へ変換
 - Pack DLL: `cudart64_12.dll`への動的依存なし
 
@@ -67,7 +68,8 @@ ctest --test-dir build-cuda -C Release --output-on-failure
 
 ## 次の性能段階
 
-Preview 3 kernelはOperator呼び出しごとにDeviceメモリを確保し、A/BをHostとDevice間で
+Preview 5ではBifrost Feedback Stateにより初期フレームからの全履歴再計算を解消しました。
+ただしCUDA kernelはOperator呼び出しごとにDeviceメモリを確保し、A/BをHostとDevice間で
 転送します。長いsubstepでは高速化を見込めますが、最終形ではありません。次段階で
-Bifrost Simulation StateとGPU常駐A/B bufferを組み合わせ、フレーム間の再確保・再転送・
-初期状態からの全再計算をなくします。3D Volume CUDAはその後、同じbackend契約へ追加します。
+GPU常駐A/B bufferを導入してフレーム間の再確保・再転送をなくします。
+3D Volume CUDAはその後、同じbackend契約へ追加します。

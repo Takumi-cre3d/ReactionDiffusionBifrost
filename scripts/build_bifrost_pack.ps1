@@ -332,6 +332,9 @@ $exportTable = $successfulInspection.Output
 $requiredExports = @(
     "reaction_diffusion_initialize_grid",
     "reaction_diffusion_grid_step",
+    "reaction_diffusion_initialize_state",
+    "reaction_diffusion_state_step",
+    "reaction_diffusion_state_outputs",
     "reaction_diffusion_initialize_volume",
     "reaction_diffusion_volume_step"
 )
@@ -341,7 +344,7 @@ foreach ($requiredExport in $requiredExports) {
     }
 }
 Write-Host "Export inspector: $($successfulInspection.Tool)"
-Write-Host "Native operator exports verified: initialize_grid, grid_step, initialize_volume, volume_step"
+Write-Host "Native operator exports verified: grid, feedback state, and volume operators"
 
 $packSource = Join-Path $buildRoot "ReactionDiffusion-0.2.0"
 $packConfig = Join-Path $packSource "ReactionDiffusionPackConfig.json"

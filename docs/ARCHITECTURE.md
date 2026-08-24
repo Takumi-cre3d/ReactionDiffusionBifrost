@@ -20,6 +20,16 @@
 
 Seedは正規化UV、正規化半径、strength、Add / Erase / Set modeの並列配列です。周期境界ではSeed自体も境界を跨ぎます。
 
+## Feedback State契約
+
+フレーム間Stateは単一の`array<float>`に`[A0..An, B0..Bn]`の順で格納します。
+`reaction_diffusion_initialize_state`が初期State、`reaction_diffusion_state_step`が次State、
+`reaction_diffusion_state_outputs`が通常のA/B・pattern・gradient出力を生成します。
+
+Native Operatorは静的／グローバルな可変Stateを持ちません。Stateの寿命、開始フレームへのReset、
+連続フレームのキャッシュはBifrost標準Feedback Portが担当します。これにより同じOperatorを
+通常グラフ、Feedback Compound、将来のキャッシュ処理で再利用できます。
+
 ## 数値モデル
 
 Gray–Scott式を陽Euler法で積分します。2Dラプラシアンは参照Web版と同じ、center `-1.0`、上下左右 `0.2`、対角 `0.05`の9点Stencilです。WebGL版との差異を減らすため、既定で各Step後のA/Bを`[0, 1]`へclampします。

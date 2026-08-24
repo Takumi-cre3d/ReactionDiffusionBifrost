@@ -20,6 +20,11 @@ if (-not (Test-Path $destinationPackage)) {
 if (-not (Test-Path $packConfig)) {
     throw "The existing native Bifrost pack is missing. Run install_all.ps1 instead."
 }
+$operatorDefinition = Join-Path $versionRoot "bifrost\ReactionDiffusion-0.2.0\json\ReactionDiffusion\ReactionDiffusion.json"
+if (-not (Test-Path $operatorDefinition) -or
+    -not [IO.File]::ReadAllText($operatorDefinition).Contains("reaction_diffusion_state_step")) {
+    throw "The installed native pack predates Preview 5 Feedback State. Run install_all.ps1 instead."
+}
 
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $backupDestination = Join-Path $moduleRoot "0.2.0_python_backup_$stamp"
@@ -62,13 +67,19 @@ $installedUiText = [IO.File]::ReadAllText($installedUi)
 if (-not $installedUiText.Contains("Create Sample Graph + Visible Pattern")) {
     throw "The Preview 4 visible sample button was not found after installation."
 }
+if (-not $installedUiText.Contains("Create Stateful Playback Graph")) {
+    throw "The Preview 5 stateful playback button was not found after installation."
+}
 $installedGraphSetup = Join-Path $destinationPackage "graph_setup.py"
 $installedGraphSetupText = [IO.File]::ReadAllText($installedGraphSetup)
 if (-not $installedGraphSetupText.Contains('("pattern", "array<float>")')) {
     throw "The Preview 4 sample graph pattern output was not found after installation."
 }
+if (-not $installedGraphSetupText.Contains("reaction_diffusion_state_step")) {
+    throw "The Preview 5 Feedback State graph builder was not found after installation."
+}
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
-Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 4 Python update installed successfully."
+Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 5 Python update installed successfully."
 Write-Host "Python backup: $backupDestination"
 Write-Host "The existing native Bifrost pack was preserved."

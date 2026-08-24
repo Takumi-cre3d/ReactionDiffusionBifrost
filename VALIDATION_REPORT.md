@@ -1,4 +1,4 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 3 Validation
+# ReactionDiffusionBifrost 0.2.0 Preview 5 Validation
 
 ## Automated checks in this distribution
 
@@ -14,6 +14,8 @@
 - Painter release callback regression test by static inspection
 - Product / module / pack version consistency scan
 - Source archive integrity check
+- Packed State round-trip and split-step equivalence test
+- Maya Feedback State frame progression and start-frame reset test
 
 ## Previously validated on the Maya 2026 target machine
 
@@ -34,33 +36,39 @@ The Seed Painter also created drag curves successfully after the MPoint conversi
 - CTest (2D and dense 3D reference solver): PASS
 - Maya-independent Python regression suite: PASS
 - Bifrost 2.15.0.0 SDK operator generation and Release build: PASS
-- DLL export inspection for grid and volume initialize/step operators: PASS
-- Installed Maya module / Python / pack config / DLL / operator JSON checks: 7/7 PASS
-- Generated operator JSON contains all four grid and volume nodes: PASS
+- DLL export inspection for grid, Feedback State and volume operators: PASS
+- Installed Maya module / Python / graph builder / pack config / DLL / operator JSON checks: PASS
+- Generated operator JSON contains all grid, Feedback State and volume nodes: PASS
 - Maya 2026 Color Set creation regression test: PASS
 - Maya 2026 `mayapy` real-mesh Color Set integration test: PASS
-- CUDA-aware CMake and Bifrost Pack build without Toolkit (CPU fallback): PASS
+- CUDA Toolkit 12.6 / RTX 4070 Ti SUPER Bifrost Pack build: PASS
+- CPU/CUDA maximum error（64×48、80 substep）: `1.72853e-6`
+- Maya 2026 CUDA Auto dispatch: `CUDA` / `auto_selected_cuda`
+- Visible sample pattern and vertex-color integration: PASS
+- Packed Feedback State frame 1→2→3 progression: PASS
+- Start-frame Feedback reset maximum error: `0.0`
 
 Maya UIでのVolume Operator検索、グラフ評価、Volume可視化は未確認です。Mayaを
 再起動した後に、下記チェックを実行する必要があります。
 
-CUDA Toolkit / `nvcc`は開発機に未導入です。2D CUDA kernelのコンパイル、RTX 4070 Ti
-SUPER上のCPU/CUDA一致テスト、benchmarkはToolkit導入後の必須検証です。
+CUDA Toolkit / `nvcc`は12.6 Update 3を最小構成で導入済みです。2D CUDA kernelの
+コンパイル、RTX 4070 Ti SUPER上のCPU/CUDA一致、benchmark、Maya評価を完了しています。
 
-## Maya checks required for Preview 2
+## Maya checks for Preview 5
 
 The following require the user's Maya 2026/Bifrost 2.15 runtime and cannot be executed in
 the packaging environment:
 
 1. Install 0.2.0 and restart Maya.
-2. Confirm the two custom operators are searchable.
+2. Confirm the grid and Feedback State custom operators are searchable.
 3. Open the previously validated 64 x 64 graph.
 4. Launch `reaction_diffusion_bifrost.show()`.
 5. Confirm the controller can be resized and vertically scrolled.
 6. Click `Refresh Existing Output`; confirm `RD_SimulationPreview` has 4096 vertices.
 7. Paint a seed and click `Sync Painted Seeds + Preview`.
 8. Confirm `Reset (0 steps)` shows the seed and `Step + Preview` grows the pattern.
-9. Report any complete Script Editor traceback.
+9. Create a Stateful Playback Graph and play consecutive frames.
+10. Confirm returning to the playback start frame resets the pattern.
 
 The development baseline additionally requires checking that
 `reaction_diffusion_initialize_volume` and `reaction_diffusion_volume_step` are searchable,

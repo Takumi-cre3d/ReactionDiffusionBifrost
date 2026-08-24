@@ -1,5 +1,5 @@
 name=ReactionDiffusionBifrost
-distributionVersion=0.2.0-preview3
+distributionVersion=0.2.0-preview5
 productVersion=0.2.0
 packVersion=0.2.0
 mayaModuleVersion=0.2.0
@@ -21,6 +21,7 @@ maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/pa
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/paint_context.py
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/preview.py
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/bridge.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/graph_setup.py
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/ui.py
 
 scripts/install_all.ps1
@@ -30,6 +31,8 @@ scripts/verify_install.ps1
 scripts/apply_python_hotfix.ps1
 tests/test_python_tools.py
 tests/test_maya_preview_color_set.py
+tests/test_maya_bifrost_cuda.py
+tests/test_maya_bifrost_stateful.py
 
 README_JA.md
 VALIDATION_REPORT.md
@@ -42,7 +45,9 @@ Notes:
 - preview.py maps a top-level Bifrost pattern array to Maya vertex colors.
 - bridge.py writes editable Painter arrays to unconnected native operator defaults via vnnNode.
 - Preview 2 adds a resizable scroll layout and moves Refresh Existing Output above the fold.
-- Step uses deterministic total-substep recomputation; state feedback is scheduled next.
+- Preview 5 adds explicit packed A/B State operators and a timeline-driven Bifrost Feedback graph.
 - The development baseline adds experimental dense 3D volume CPU operators; Maya/Bifrost runtime validation is pending.
 - Preview 3 fixes Maya 2026 color-set creation and preserves installed native packs during Python reinstalls.
 - Preview 3 adds optional CUDA detection, CUDA-first Auto dispatch and an experimental 2D ping-pong kernel.
+- Preview 4 adds one-click native graph and visible-pattern creation.
+- Preview 5 keeps Native Operators stateless while Bifrost owns frame-to-frame feedback caches.
