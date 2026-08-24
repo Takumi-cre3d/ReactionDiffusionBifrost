@@ -209,11 +209,11 @@ def update_preview(
     for index, value in enumerate(mapped):
         colors.append(om.MColor(_color_ramp(value)))
         vertex_ids.append(index)
-    mesh.setVertexColors(colors, vertex_ids, COLOR_SET)
-    try:
-        cmds.polyColorSet(shape, currentColorSet=True, colorSet=COLOR_SET)
-    except RuntimeError:
-        pass
+    # Maya API 2.0 does not accept a color-set name as the third argument to
+    # setVertexColors. In Maya 2026 that position is an optional MDGModifier.
+    # Select the target set first, then let the bulk write use the current set.
+    mesh.setCurrentColorSetName(COLOR_SET)
+    mesh.setVertexColors(colors, vertex_ids)
     cmds.setAttr(f"{shape}.displayColors", 1)
     cmds.dgdirty(shape)
     cmds.refresh(force=True)

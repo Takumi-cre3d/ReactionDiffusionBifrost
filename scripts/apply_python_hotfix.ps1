@@ -52,6 +52,12 @@ if ($installedPreviewText.Contains(".createColorSetWithName(")) {
 if (-not $installedPreviewText.Contains("cmds.polyColorSet(")) {
     throw "The Maya 2026 polyColorSet preview fix was not found after installation."
 }
+if ($installedPreviewText.Contains("mesh.setVertexColors(colors, vertex_ids, COLOR_SET)")) {
+    throw "The unsupported Maya 2026 setVertexColors color-set argument is still installed."
+}
+if (-not $installedPreviewText.Contains("mesh.setCurrentColorSetName(COLOR_SET)")) {
+    throw "The Maya 2026 current color-set selection fix was not found after installation."
+}
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
 Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 3 Python update installed successfully."

@@ -98,6 +98,9 @@ def main() -> None:
     )
     assert ".createColorSetWithName(" not in preview_source
     assert "cmds.polyColorSet(" in preview_source
+    assert "mesh.setCurrentColorSetName(COLOR_SET)" in preview_source
+    assert "mesh.setVertexColors(colors, vertex_ids)" in preview_source
+    assert "mesh.setVertexColors(colors, vertex_ids, COLOR_SET)" not in preview_source
     refresh_index = ui_source.index('label="Refresh Existing Output"')
     normalize_index = ui_source.index('label="Normalize preview contrast"')
     assert refresh_index < normalize_index
