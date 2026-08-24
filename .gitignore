@@ -1,0 +1,33 @@
+# Local hand-off snapshots. They remain on disk but are never part of this repository.
+/ReactionDiffusionBifrost_v*/
+
+# CMake / native build products
+/build/
+/out/
+/cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+*.sln
+*.vcxproj*
+*.pdb
+*.obj
+*.dll
+*.lib
+*.exp
+
+# Generated Bifrost packs and local installation artifacts
+ReactionDiffusion-*/
+*.backup_*/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,44 @@
+name=ReactionDiffusionBifrost
+distributionVersion=0.2.0-preview2
+productVersion=0.2.0
+packVersion=0.2.0
+mayaModuleVersion=0.2.0
+mayaTarget=2026
+bifrostValidatedBaseline=2.15.0.0
+
+native/core/ReactionDiffusionCore.h
+native/core/ReactionDiffusionVolumeCore.h
+native/bifrost/ReactionDiffusion.h
+native/bifrost/ReactionDiffusion.cpp
+native/tools/rd_core_tests.cpp
+native/tools/rd_benchmark.cpp
+native/tools/rd_reference_image.cpp
+
+maya_module/ReactionDiffusionBifrost.mod
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/__init__.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/payload.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/paint_context.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/preview.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/bridge.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/ui.py
+
+scripts/install_all.ps1
+scripts/install_maya_module.ps1
+scripts/build_bifrost_pack.ps1
+scripts/verify_install.ps1
+scripts/apply_python_hotfix.ps1
+tests/test_python_tools.py
+
+README_JA.md
+VALIDATION_REPORT.md
+LICENSE
+VERSION
+CMakeLists.txt
+
+Notes:
+- 0.2.0 preserves all native build and install fixes from 0.1.0 hotfix8.
+- preview.py maps a top-level Bifrost pattern array to Maya vertex colors.
+- bridge.py writes editable Painter arrays to unconnected native operator defaults via vnnNode.
+- Preview 2 adds a resizable scroll layout and moves Refresh Existing Output above the fold.
+- Step uses deterministic total-substep recomputation; state feedback is scheduled next.
+- The development baseline adds experimental dense 3D volume CPU operators; Maya/Bifrost runtime validation is pending.
