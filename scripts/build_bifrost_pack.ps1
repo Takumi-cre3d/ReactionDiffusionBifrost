@@ -43,6 +43,29 @@ function Find-VectorLengthExampleRoot([string]$bifrostRoot) {
     return $directory.FullName
 }
 
+function Find-CudaToolkitRoot {
+    # Preserve array semantics even when exactly one environment candidate is
+    # present. Without the outer @(), PowerShell unwraps it to a string and +=
+    # concatenates the default-path candidate onto that string.
+    $candidates = @(@(
+        $env:CUDA_PATH
+        [Environment]::GetEnvironmentVariable("CUDA_PATH", "Machine")
+        [Environment]::GetEnvironmentVariable("CUDA_PATH", "User")
+    ) | Where-Object { $_ })
+    $defaultRoot = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
+    if (Test-Path $defaultRoot) {
+        $candidates += @(Get-ChildItem -Path $defaultRoot -Directory |
+            Sort-Object Name -Descending |
+            Select-Object -ExpandProperty FullName)
+    }
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        if (Test-Path (Join-Path $candidate "bin\nvcc.exe")) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+    return ""
+}
+
 if (-not $InstallRoot) {
     $documents = [Environment]::GetFolderPath("MyDocuments")
     $InstallRoot = Join-Path $documents "maya\modules\ReactionDiffusionBifrost\0.2.0"
@@ -50,6 +73,19 @@ if (-not $InstallRoot) {
 
 $bifrostRoot = Find-BifrostRoot
 $exampleRoot = Find-VectorLengthExampleRoot $bifrostRoot
+$cudaRoot = ""
+$cudaToolset = ""
+if ($EnableCuda) {
+    $cudaRoot = Find-CudaToolkitRoot
+    if ($cudaRoot) {
+        $env:CUDA_PATH = $cudaRoot
+        $cudaVersionMatch = [regex]::Match((Split-Path $cudaRoot -Leaf), "^v([0-9]+\.[0-9]+)$")
+        if ($cudaVersionMatch.Success) {
+            $cudaToolset = $cudaVersionMatch.Groups[1].Value
+            Set-Item -Path ("Env:CUDA_PATH_V" + $cudaToolset.Replace(".", "_")) -Value $cudaRoot
+        }
+    }
+}
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
 if (-not $localAppData) {
@@ -156,9 +192,13 @@ if(CMAKE_CUDA_COMPILER)
         $operatorTarget
         PROPERTIES
             CUDA_ARCHITECTURES "75;86;89"
+            CUDA_RUNTIME_LIBRARY Static
             CUDA_STANDARD 17
             CUDA_STANDARD_REQUIRED ON
     )
+    if(MSVC)
+        target_link_options($operatorTarget PRIVATE /NODEFAULTLIB:LIBCMT)
+    endif()
     message(STATUS "ReactionDiffusion CUDA backend: enabled (`${CMAKE_CUDA_COMPILER})")
 else()
     message(STATUS "ReactionDiffusion CUDA backend: disabled (nvcc not found)")
@@ -177,8 +217,15 @@ $env:BIFROST_LOCATION = $bifrostRoot
 Write-Host "Bifrost SDK parser compatibility: enabled for current Visual Studio STL"
 Write-Host "Amino runtime links: Amino::Cpp, Amino::Core -> $operatorTarget"
 Write-Host "CUDA backend requested: $EnableCuda (build remains CPU-compatible when nvcc is absent)"
+if ($cudaRoot) {
+    Write-Host "CUDA Toolkit: $cudaRoot"
+}
 Write-Host "Build workspace: $workingRoot"
-cmake -S $sourceRoot -B $buildRoot
+$configureArguments = @("-S", $sourceRoot, "-B", $buildRoot)
+if ($cudaToolset) {
+    $configureArguments += @("-T", "cuda=$cudaToolset")
+}
+cmake @configureArguments
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed with exit code $LASTEXITCODE." }
 cmake --build $buildRoot --config $Configuration --target install
 if ($LASTEXITCODE -ne 0) { throw "Bifrost pack build failed with exit code $LASTEXITCODE." }

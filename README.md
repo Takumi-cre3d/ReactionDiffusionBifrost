@@ -13,21 +13,25 @@ CPU実装は数値参照・fallback・CUDAを持たない環境向けとして�
 - C++17のGray–Scott CPUソルバー（OpenMP対応）
 - Bifrost Native Operator: 2Dグリッド初期化／ステップ
 - 実験的な3D dense volume CPUソルバー／Native Operator
-- CUDA Toolkit自動検出、CUDA優先Auto dispatch、実験的2D ping-pong kernel
+- CUDA Toolkit自動検出、CUDA優先Auto dispatch、実機検証済み2D ping-pong kernel
 - Periodic / NoFlux / FixedInitial境界
 - UV Seed PainterとBifrost配列の同期
 - Maya頂点カラーによる非破壊プレビュー
 - 決定論的なReset / Step操作
 - C++単体テストとMaya非依存Python回帰テスト
 
-2D / UVグリッドのCPU経路が検証済みの基準実装です。2D CUDA kernelは実装済みですが、
-現在の開発機にはCUDA Toolkit / `nvcc`がないため実機コンパイルとCPU数値比較は未完了です。
+2D / UVグリッドのCPU経路が検証済みの基準実装です。2D CUDA kernelはCUDA 12.6、
+RTX 4070 Ti SUPERでコンパイル、CPU数値比較、Maya/Bifrost実行まで検証済みです。
+1024²・15 substepの開発機測定ではCPU 74.543 msに対してCUDA 3.654 ms（20.398倍）、
+最大数値誤差は`1.73e-6`でした。
 3D Volumeは密配列CPU参照実装までで、Surface Solver、GPU常駐Simulation State、
 Volume CUDA、Sparse化もロードマップ上の開発項目です。詳細は[CUDA開発状況](docs/CUDA.md)を参照してください。
 
 ## クイックスタート
 
-必要環境はWindows 10/11、Maya 2026、Bifrost 2.15 SDK、Visual Studio 2022、CMakeです。Mayaを終了してからPowerShellで実行します。
+必要環境はWindows 10/11、Maya 2026、Bifrost 2.15 SDK、Visual Studio 2022、CMakeです。
+CUDA版をビルドする開発機にはCUDA Toolkit 12.xが必要です。生成DLLはCUDA Runtimeを
+静的リンクするため、利用側のartist machineにToolkitを要求しません。Mayaを終了してからPowerShellで実行します。
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -53,6 +57,15 @@ python tests/test_python_tools.py
 ```
 
 Bifrost OperatorのビルドとMaya内動作確認には対象マシンのBifrost SDKが必要です。
+CUDA PackをインストールしたMaya 2026開発機では、未保存のbatch sceneを使う統合テストも実行できます。
+
+```powershell
+$env:MAYA_SKIP_USERSETUP_PY = "1"
+$env:PYTHONNOUSERSITE = "1"
+$env:RD_MAYA_ALREADY_INITIALIZED = "1"
+& "C:\Program Files\Autodesk\Maya2026\bin\mayabatch.exe" -command `
+  'python("exec(open(r''D:/path/to/ReactionDiffusionBifrost/tests/test_maya_bifrost_cuda.py'').read())")'
+```
 
 ## License
 

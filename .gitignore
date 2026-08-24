@@ -3,6 +3,7 @@
 
 # CMake / native build products
 /build/
+/build-*/
 /out/
 /cmake-build-*/
 CMakeCache.txt

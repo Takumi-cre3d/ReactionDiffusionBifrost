@@ -18,9 +18,10 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 - Web版のMitosis / Coral / Spots / Stripes / WormsプリセットをCompoundとして提供
 - 入力メッシュUVへの直接プレビュー／ベイク
 - UVシームを跨ぐ接続方針とテストデータを確定
-- CUDA Toolkit / Host compiler / Driverの互換開発環境を確定
+- [x] CUDA Toolkit / Host compiler / Driverの互換開発環境を確定
 - [x] CUDA優先Auto dispatchと2D ping-pong kernel source
-- [ ] RTX 4070 Ti SUPERでCPU/CUDA数値一致と1024² benchmarkを検証
+- [x] RTX 4070 Ti SUPERでCPU/CUDA数値一致と1024² benchmarkを検証
+- [x] Maya 2026 / Bifrost 2.15でCUDA Native Operator実評価と異常入力封じ込めを検証
 - [ ] A/BをGPU常駐StateにしてOperator間のHost転送を除去
 
 ## Milestone 2 — Volume solver

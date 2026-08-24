@@ -43,12 +43,19 @@ if(RD_ENABLE_CUDA)
             reaction_diffusion_cuda
             PROPERTIES
                 CUDA_ARCHITECTURES "${RD_CUDA_ARCHITECTURES}"
+                CUDA_RUNTIME_LIBRARY Static
                 CUDA_STANDARD 17
                 CUDA_STANDARD_REQUIRED ON
                 POSITION_INDEPENDENT_CODE ON
         )
         target_compile_definitions(reaction_diffusion_core INTERFACE RD_HAS_CUDA=1)
         target_link_libraries(reaction_diffusion_core INTERFACE reaction_diffusion_cuda)
+        if(MSVC)
+            # cudart_static advertises LIBCMT, while Maya/Bifrost and this
+            # project use the DLL CRT (/MD). Keep one host CRT in the final
+            # binary and retain a self-contained CUDA runtime.
+            target_link_options(reaction_diffusion_core INTERFACE /NODEFAULTLIB:LIBCMT)
+        endif()
         set(RD_CUDA_AVAILABLE ON)
         message(STATUS "ReactionDiffusion CUDA backend: enabled (${CMAKE_CUDA_COMPILER})")
     elseif(RD_REQUIRE_CUDA)

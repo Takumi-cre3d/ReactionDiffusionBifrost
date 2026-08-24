@@ -32,21 +32,6 @@ public:
     DeviceBuffer(const DeviceBuffer&) = delete;
     DeviceBuffer& operator=(const DeviceBuffer&) = delete;
 
-    DeviceBuffer(DeviceBuffer&& other) noexcept : data_(other.data_) {
-        other.data_ = nullptr;
-    }
-
-    DeviceBuffer& operator=(DeviceBuffer&& other) noexcept {
-        if (this != &other) {
-            if (data_) {
-                cudaFree(data_);
-            }
-            data_ = other.data_;
-            other.data_ = nullptr;
-        }
-        return *this;
-    }
-
     ~DeviceBuffer() {
         if (data_) {
             cudaFree(data_);
@@ -54,7 +39,6 @@ public:
     }
 
     float* get() noexcept { return data_; }
-    const float* get() const noexcept { return data_; }
 
 private:
     float* data_ = nullptr;

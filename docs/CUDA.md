@@ -16,22 +16,45 @@ ReactionDiffusionBifrostの本番向け高速実行経路はCUDAです。`Backen
 - CUDA優先Auto dispatchと、buildなし／deviceなしを区別するstatus
 - CUDA build時だけ有効になるCPU/CUDA数値比較テスト
 - Turing 7.5、Ampere 8.6、Ada 8.9向けコード生成設定
+- CUDA Runtime静的リンクとMayaのDLL MSVC Runtimeとの競合回避
+- Maya/Bifrost境界での例外封じ込め（不正入力は`ERROR` statusへ変換）
 
 ## 開発機監査（2026-08-24）
 
 - GPU: NVIDIA GeForce RTX 4070 Ti SUPER、16GB、Compute Capability 8.9
 - Driver: 560.94（`nvidia-smi`表示のCUDA互換上限は12.6）
 - Host compiler: Visual Studio 2022 17.14 / MSVC 19.44
-- CUDA Toolkit / `nvcc`: 未導入
+- CUDA Toolkit: 12.6 Update 3（Driverを除外した最小開発構成）
+- `nvcc`: 12.6.85
 
-このため、現在のCUDA sourceはCPU-only構成を壊さないことまで検証済みですが、CUDA
-コンパイルと実機実行は未検証です。ToolkitとHost compiler、Driverの互換組み合わせを
-確定してから導入します。
+既存Driverは変更せず、`nvcc_12.6`、`cudart_12.6`、
+`visual_studio_integration_12.6`だけを導入しました。NVIDIAのCUDA 12.x minor-version
+compatibility範囲内であり、MSVC 19.44による実コンパイルも成功しています。
+
+## 2026-08-24 実機検証結果
+
+- CUDA compiler / device検出: PASS
+- C++回帰テスト: PASS
+- CPU/CUDA最大誤差（64×48、80 substep）: `1.72853e-6`
+- `Backend::Auto`: `CUDA` / `auto_selected_cuda`
+- Maya 2026 / Bifrost 2.15 native operator評価: PASS
+- 不正`time_step=0`: Mayaを終了させず`ERROR` / `error: ...`へ変換
+- Pack DLL: `cudart64_12.dll`への動的依存なし
+
+1024×1024、15 substep、7回の中央値（RTX 4070 Ti SUPER）:
+
+| Backend | 15 substep | 1 substep | cells/sec |
+| --- | ---: | ---: | ---: |
+| OpenMP CPU | 74.543 ms | 4.970 ms | 2.110e8 |
+| CUDA | 3.654 ms | 0.244 ms | 4.304e9 |
+
+この条件でCUDAはCPU比`20.398x`です。現在のCUDA値はOperator呼び出しごとの
+Device確保とHost/Device転送を含むため、GPU常駐化前の保守的な測定です。
 
 ## Toolkit導入後の検証ゲート
 
 ```powershell
-cmake -S . -B build-cuda `
+cmake -S . -B build-cuda -G "Visual Studio 17 2022" -A x64 -T cuda=12.6 `
   -DRD_ENABLE_CUDA=ON `
   -DRD_REQUIRE_CUDA=ON `
   -DRD_CUDA_ARCHITECTURES=89
@@ -39,8 +62,8 @@ cmake --build build-cuda --config Release
 ctest --test-dir build-cuda -C Release --output-on-failure
 ```
 
-続いてBifrost Packをbuildし、`backend_used == "CUDA"`、status、CPUとの最大誤差、
-1024²以上のbenchmarkを確認します。
+続いてBifrost Packをbuildし、`tests/test_maya_bifrost_cuda.py`をMaya batchで実行します。
+このテストは`backend_used == "CUDA"`、status、実評価、不正入力の例外封じ込めを確認します。
 
 ## 次の性能段階
 

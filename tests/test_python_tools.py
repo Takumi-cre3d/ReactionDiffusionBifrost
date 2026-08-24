@@ -112,6 +112,9 @@ def main() -> None:
     assert "ReactionDiffusionCuda.cu" in build_script_source
     assert "RD_HAS_CUDA=1" in build_script_source
     assert 'CUDA_ARCHITECTURES "75;86;89"' in build_script_source
+    assert "Find-CudaToolkitRoot" in build_script_source
+    assert "CUDA_RUNTIME_LIBRARY Static" in build_script_source
+    assert "/NODEFAULTLIB:LIBCMT" in build_script_source
     hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
         encoding="utf-8"
     )

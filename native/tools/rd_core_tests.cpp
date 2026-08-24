@@ -161,6 +161,13 @@ void test_cuda_matches_cpu_when_available() {
         maximum_error = std::max(maximum_error, std::abs(cpu_state.b[index] - cuda_state.b[index]));
     }
     require(maximum_error <= 5.0e-4f, "CUDA result differs from the CPU reference.");
+    std::cout << "cudaMaximumError=" << maximum_error << "\n";
+
+    RD::GridState auto_state(16, 16);
+    const RD::StepResult auto_result = RD::step(
+        auto_state, parameters, {}, RD::BoundaryMode::Periodic, 1, RD::Backend::Auto, false);
+    require(auto_result.actual_backend == RD::Backend::CUDA, "Auto did not select CUDA.");
+    require(auto_result.status == "auto_selected_cuda", "Auto CUDA status is incorrect.");
 #endif
 }
 
