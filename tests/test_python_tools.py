@@ -94,9 +94,11 @@ def main() -> None:
     assert "sizeable=True" in ui_source
     assert "cmds.scrollLayout(childResizable=True" in ui_source
     assert 'label="Create Sample Graph + Visible Pattern"' in ui_source
-    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 5"' in ui_source
+    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 6"' in ui_source
     assert 'label="Create Stateful Playback Graph"' in ui_source
-    assert 'event=("timeChanged", _refresh_on_time_changed)' in ui_source
+    assert "om.MDGMessage.addForceUpdateCallback(_on_dg_time_changed)" in ui_source
+    assert 'event=("timeChanged", _refresh_on_time_changed)' not in ui_source
+    assert "refresh_viewport=refresh_viewport" in ui_source
     graph_setup_source = (
         PACKAGE_ROOT / "reaction_diffusion_bifrost" / "graph_setup.py"
     ).read_text(encoding="utf-8")
@@ -139,7 +141,7 @@ def main() -> None:
     hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
         encoding="utf-8"
     )
-    assert "Preview 5 Python update installed successfully" in hotfix_source
+    assert "Preview 6 Python update installed successfully" in hotfix_source
     assert "unsupported Maya 2026 createColorSetWithName" in hotfix_source
     native_header = (ROOT / "native" / "bifrost" / "ReactionDiffusion.h").read_text(
         encoding="utf-8"
@@ -152,8 +154,9 @@ def main() -> None:
         assert state_operator in native_header
         assert state_operator in build_script_source
     manifest_source = (ROOT / "SOURCE_MANIFEST.txt").read_text(encoding="utf-8")
-    assert "distributionVersion=0.2.0-preview5" in manifest_source
+    assert "distributionVersion=0.2.0-preview6" in manifest_source
     assert "tests/test_maya_bifrost_stateful.py" in manifest_source
+    assert "tests/test_maya_playback_callback.py" in manifest_source
     print("ReactionDiffusion Maya Python helper tests: PASS")
 
 

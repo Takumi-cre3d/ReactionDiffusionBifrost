@@ -177,6 +177,7 @@ def update_preview(
     width: int = 64,
     height: int = 64,
     normalize: bool = False,
+    refresh_viewport: bool = True,
 ) -> str:
     """Evaluate the graph and display its pattern on a colored polygon plane."""
     graph_shape = resolve_graph(graph)
@@ -216,7 +217,8 @@ def update_preview(
     mesh.setVertexColors(colors, vertex_ids)
     cmds.setAttr(f"{shape}.displayColors", 1)
     cmds.dgdirty(shape)
-    cmds.refresh(force=True)
+    if refresh_viewport:
+        cmds.refresh(force=True)
     return PREVIEW_MESH
 
 

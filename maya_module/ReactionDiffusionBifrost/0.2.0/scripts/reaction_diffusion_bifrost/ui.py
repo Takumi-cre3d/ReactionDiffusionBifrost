@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import maya.api.OpenMaya as om
 import maya.cmds as cmds
 
 from . import bridge, graph_setup, paint_context, payload, preview
@@ -12,6 +13,8 @@ from . import bridge, graph_setup, paint_context, payload, preview
 WINDOW = "reactionDiffusionBifrostWindow"
 CONTROLS = {}
 _TIME_REFRESH_BUSY = False
+_TIME_CALLBACK_ID = None
+_LAST_PREVIEW_KEY = None
 
 
 def _status(message: str) -> None:
@@ -167,27 +170,64 @@ def _is_stateful_graph(graph: str) -> bool:
     return bool(graph and cmds.objExists(graph) and cmds.objExists(f"{graph}.state"))
 
 
-def _refresh_on_time_changed() -> None:
-    global _TIME_REFRESH_BUSY
+def _refresh_on_time_changed(refresh_viewport: bool = True) -> None:
+    global _TIME_REFRESH_BUSY, _LAST_PREVIEW_KEY
     if _TIME_REFRESH_BUSY or not CONTROLS.get("graph"):
         return
     graph_text = cmds.textField(CONTROLS["graph"], query=True, text=True).strip()
     if not _is_stateful_graph(graph_text):
         return
+    frame = float(cmds.currentTime(query=True))
+    preview_key = (graph_text, frame)
+    if not refresh_viewport and preview_key == _LAST_PREVIEW_KEY:
+        return
     _TIME_REFRESH_BUSY = True
     try:
         settings = _simulation_settings()
         mesh = preview.update_preview(
-            graph_text, settings["width"], settings["height"], True)
+            graph_text,
+            settings["width"],
+            settings["height"],
+            True,
+            refresh_viewport=refresh_viewport,
+        )
         backend = cmds.getAttr(f"{graph_text}.backend_used")
+        _LAST_PREVIEW_KEY = preview_key
         _status(
-            f"State frame {cmds.currentTime(query=True):g}: {mesh}    {backend}")
+            f"State frame {frame:g}: {mesh}    {backend}")
     except (RuntimeError, ValueError):
         # Timeline callbacks must not interrupt playback. Full errors remain
         # available from explicit Refresh/Step operations.
         pass
     finally:
         _TIME_REFRESH_BUSY = False
+
+
+def _on_dg_time_changed(_time, _client_data) -> None:
+    """Refresh after Maya evaluates a playback frame.
+
+    scriptJob events are intentionally suppressed by Maya during playback.
+    MDGMessage is delivered by the dependency graph itself, including while
+    the timeline is playing. The viewport is already refreshing in that path,
+    so forcing another refresh here would recurse into the draw loop.
+    """
+    _refresh_on_time_changed(refresh_viewport=False)
+
+
+def _remove_time_callback(*_args) -> None:
+    global _TIME_CALLBACK_ID
+    if _TIME_CALLBACK_ID is not None:
+        try:
+            om.MMessage.removeCallback(_TIME_CALLBACK_ID)
+        except RuntimeError:
+            pass
+        _TIME_CALLBACK_ID = None
+
+
+def _install_time_callback() -> None:
+    global _TIME_CALLBACK_ID
+    _remove_time_callback()
+    _TIME_CALLBACK_ID = om.MDGMessage.addForceUpdateCallback(_on_dg_time_changed)
 
 
 def _step(*_args) -> None:
@@ -258,6 +298,7 @@ def _print_flattened(*_args) -> None:
 
 
 def show():
+    _remove_time_callback()
     if cmds.window(WINDOW, exists=True):
         cmds.deleteUI(WINDOW)
     # Maya can retain a DPI-clamped window size between sessions. Remove that
@@ -267,7 +308,7 @@ def show():
     CONTROLS.clear()
     window = cmds.window(
         WINDOW,
-        title="Reaction Diffusion Controller 0.2.0 Preview 5",
+        title="Reaction Diffusion Controller 0.2.0 Preview 6",
         sizeable=True,
         widthHeight=(480, 720),
     )
@@ -351,7 +392,8 @@ def show():
     cmds.showWindow(window)
     cmds.window(window, edit=True, widthHeight=(480, 720))
 
-    cmds.scriptJob(event=("timeChanged", _refresh_on_time_changed), parent=window)
+    _install_time_callback()
+    cmds.scriptJob(uiDeleted=(window, _remove_time_callback), runOnce=True)
 
     paint_context.set_stroke_committed_callback(_auto_sync_after_stroke)
     _refresh_counts()

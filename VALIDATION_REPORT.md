@@ -1,4 +1,4 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 5 Validation
+# ReactionDiffusionBifrost 0.2.0 Preview 6 Validation
 
 ## Automated checks in this distribution
 
@@ -16,6 +16,7 @@
 - Source archive integrity check
 - Packed State round-trip and split-step equivalence test
 - Maya Feedback State frame progression and start-frame reset test
+- Maya DG playback-time callback delivery and non-recursive refresh test
 
 ## Previously validated on the Maya 2026 target machine
 
@@ -47,6 +48,8 @@ The Seed Painter also created drag curves successfully after the MPoint conversi
 - Visible sample pattern and vertex-color integration: PASS
 - Packed Feedback State frame 1→2→3 progression: PASS
 - Start-frame Feedback reset maximum error: `0.0`
+- Maya 2026 DG time callback delivery at frames 2, 3 and 4: PASS
+- Playback callback requests no recursive forced viewport refresh: PASS
 
 Maya UIでのVolume Operator検索、グラフ評価、Volume可視化は未確認です。Mayaを
 再起動した後に、下記チェックを実行する必要があります。
@@ -54,7 +57,7 @@ Maya UIでのVolume Operator検索、グラフ評価、Volume可視化は未確�
 CUDA Toolkit / `nvcc`は12.6 Update 3を最小構成で導入済みです。2D CUDA kernelの
 コンパイル、RTX 4070 Ti SUPER上のCPU/CUDA一致、benchmark、Maya評価を完了しています。
 
-## Maya checks for Preview 5
+## Maya checks for Preview 6
 
 The following require the user's Maya 2026/Bifrost 2.15 runtime and cannot be executed in
 the packaging environment:

@@ -70,6 +70,9 @@ if (-not $installedUiText.Contains("Create Sample Graph + Visible Pattern")) {
 if (-not $installedUiText.Contains("Create Stateful Playback Graph")) {
     throw "The Preview 5 stateful playback button was not found after installation."
 }
+if (-not $installedUiText.Contains("om.MDGMessage.addForceUpdateCallback")) {
+    throw "The Preview 6 playback DG callback was not found after installation."
+}
 $installedGraphSetup = Join-Path $destinationPackage "graph_setup.py"
 $installedGraphSetupText = [IO.File]::ReadAllText($installedGraphSetup)
 if (-not $installedGraphSetupText.Contains('("pattern", "array<float>")')) {
@@ -80,6 +83,6 @@ if (-not $installedGraphSetupText.Contains("reaction_diffusion_state_step")) {
 }
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
-Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 5 Python update installed successfully."
+Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 6 Python update installed successfully."
 Write-Host "Python backup: $backupDestination"
 Write-Host "The existing native Bifrost pack was preserved."
