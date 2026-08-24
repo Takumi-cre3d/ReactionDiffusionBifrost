@@ -2,7 +2,8 @@ param(
     [string]$MayaVersion = "2026",
     [ValidateSet("Debug", "Release", "RelWithDebInfo")]
     [string]$Configuration = "Release",
-    [string]$InstallRoot = ""
+    [string]$InstallRoot = "",
+    [bool]$EnableCuda = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -88,6 +89,9 @@ Copy-Item -Force -Path (Join-Path $packageRoot "native\bifrost\ReactionDiffusion
 Copy-Item -Force -Path (Join-Path $packageRoot "native\bifrost\ReactionDiffusion.h") -Destination $operatorHeader.FullName
 Copy-Item -Force -Path (Join-Path $packageRoot "native\core\ReactionDiffusionCore.h") -Destination (Join-Path $operatorDir "ReactionDiffusionCore.h")
 Copy-Item -Force -Path (Join-Path $packageRoot "native\core\ReactionDiffusionVolumeCore.h") -Destination (Join-Path $operatorDir "ReactionDiffusionVolumeCore.h")
+if ($EnableCuda) {
+    Copy-Item -Force -Path (Join-Path $packageRoot "native\cuda\ReactionDiffusionCuda.cu") -Destination (Join-Path $operatorDir "ReactionDiffusionCuda.cu")
+}
 
 $headerText = [IO.File]::ReadAllText($operatorHeader.FullName)
 $compatibilityDefine = "_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
@@ -134,9 +138,45 @@ foreach ($requiredAminoTarget in $requiredAminoTargets) {
     }
 }
 
+if ($EnableCuda) {
+    # Keep CPU-only installation possible on artist machines. When a CUDA
+    # Toolkit is present, compile the same Bifrost DLL with the CUDA source and
+    # expose RD_HAS_CUDA to the C++ dispatcher. Ada (8.9) covers the current
+    # RTX 4070 Ti SUPER development target while 7.5/8.6 retain portability.
+    $cudaCMakeBlock = @"
+
+# Optional ReactionDiffusion CUDA backend.
+include(CheckLanguage)
+check_language(CUDA)
+if(CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+    target_sources($operatorTarget PRIVATE ReactionDiffusionCuda.cu)
+    target_compile_definitions($operatorTarget PRIVATE RD_HAS_CUDA=1)
+    set_target_properties(
+        $operatorTarget
+        PROPERTIES
+            CUDA_ARCHITECTURES "75;86;89"
+            CUDA_STANDARD 17
+            CUDA_STANDARD_REQUIRED ON
+    )
+    message(STATUS "ReactionDiffusion CUDA backend: enabled (`${CMAKE_CUDA_COMPILER})")
+else()
+    message(STATUS "ReactionDiffusion CUDA backend: disabled (nvcc not found)")
+endif()
+"@
+    $operatorCMakeText = [IO.File]::ReadAllText($operatorCMakePath)
+    if (-not $operatorCMakeText.Contains("ReactionDiffusionCuda.cu")) {
+        [IO.File]::WriteAllText(
+            $operatorCMakePath,
+            $operatorCMakeText.TrimEnd() + $cudaCMakeBlock + "`r`n"
+        )
+    }
+}
+
 $env:BIFROST_LOCATION = $bifrostRoot
 Write-Host "Bifrost SDK parser compatibility: enabled for current Visual Studio STL"
 Write-Host "Amino runtime links: Amino::Cpp, Amino::Core -> $operatorTarget"
+Write-Host "CUDA backend requested: $EnableCuda (build remains CPU-compatible when nvcc is absent)"
 Write-Host "Build workspace: $workingRoot"
 cmake -S $sourceRoot -B $buildRoot
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed with exit code $LASTEXITCODE." }

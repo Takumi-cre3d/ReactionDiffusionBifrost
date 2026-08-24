@@ -6,18 +6,24 @@ Maya 2026 / Bifrost 2.15向けの、Gray–Scott反応拡散シミュレーシ�
 
 ## 現在地
 
-`0.2.0-preview2`を引き継ぎ元の正本としてリポジトリ化しました。
+`0.2.0-preview2`を引き継ぎ元の正本としてリポジトリ化し、現在は
+`0.2.0-preview3`を開発しています。最終的な高速実行経路はCUDAを第一候補とし、
+CPU実装は数値参照・fallback・CUDAを持たない環境向けとして維持します。
 
 - C++17のGray–Scott CPUソルバー（OpenMP対応）
 - Bifrost Native Operator: 2Dグリッド初期化／ステップ
 - 実験的な3D dense volume CPUソルバー／Native Operator
+- CUDA Toolkit自動検出、CUDA優先Auto dispatch、実験的2D ping-pong kernel
 - Periodic / NoFlux / FixedInitial境界
 - UV Seed PainterとBifrost配列の同期
 - Maya頂点カラーによる非破壊プレビュー
 - 決定論的なReset / Step操作
 - C++単体テストとMaya非依存Python回帰テスト
 
-2D / UVグリッドが検証済みの基準実装です。3D Volumeは密配列CPU参照実装まで追加済みですが、Maya内検証、Bifrost Volume型への変換、Sparse化は未完了です。Surface Solver、Simulation State、CUDAもロードマップ上の開発項目です。
+2D / UVグリッドのCPU経路が検証済みの基準実装です。2D CUDA kernelは実装済みですが、
+現在の開発機にはCUDA Toolkit / `nvcc`がないため実機コンパイルとCPU数値比較は未完了です。
+3D Volumeは密配列CPU参照実装までで、Surface Solver、GPU常駐Simulation State、
+Volume CUDA、Sparse化もロードマップ上の開発項目です。詳細は[CUDA開発状況](docs/CUDA.md)を参照してください。
 
 ## クイックスタート
 

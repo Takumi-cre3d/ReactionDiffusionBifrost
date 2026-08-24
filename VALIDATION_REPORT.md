@@ -1,9 +1,11 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 2 Validation
+# ReactionDiffusionBifrost 0.2.0 Preview 3 Validation
 
 ## Automated checks in this distribution
 
 - C++ Gray–Scott core unit tests
 - Dense 3D volume stationarity, periodic seed, bounded concentration and output-size tests
+- CPU-only CUDA fallback contract and explicit Volume CUDA fallback tests
+- Conditional CPU/CUDA parity test when a compiled CUDA backend and device are available
 - Release core benchmark
 - Python syntax compilation for all Maya modules
 - Preview pattern flattening, size validation and color-ramp tests with Maya stubs
@@ -35,9 +37,15 @@ The Seed Painter also created drag curves successfully after the MPoint conversi
 - DLL export inspection for grid and volume initialize/step operators: PASS
 - Installed Maya module / Python / pack config / DLL / operator JSON checks: 7/7 PASS
 - Generated operator JSON contains all four grid and volume nodes: PASS
+- Maya 2026 Color Set creation regression test: PASS
+- Maya 2026 `mayapy` real-mesh Color Set integration test: PASS
+- CUDA-aware CMake and Bifrost Pack build without Toolkit (CPU fallback): PASS
 
 Maya UIでのVolume Operator検索、グラフ評価、Volume可視化は未確認です。Mayaを
 再起動した後に、下記チェックを実行する必要があります。
+
+CUDA Toolkit / `nvcc`は開発機に未導入です。2D CUDA kernelのコンパイル、RTX 4070 Ti
+SUPER上のCPU/CUDA一致テスト、benchmarkはToolkit導入後の必須検証です。
 
 ## Maya checks required for Preview 2
 

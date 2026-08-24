@@ -18,6 +18,10 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 - Web版のMitosis / Coral / Spots / Stripes / WormsプリセットをCompoundとして提供
 - 入力メッシュUVへの直接プレビュー／ベイク
 - UVシームを跨ぐ接続方針とテストデータを確定
+- CUDA Toolkit / Host compiler / Driverの互換開発環境を確定
+- [x] CUDA優先Auto dispatchと2D ping-pong kernel source
+- [ ] RTX 4070 Ti SUPERでCPU/CUDA数値一致と1024² benchmarkを検証
+- [ ] A/BをGPU常駐StateにしてOperator間のHost転送を除去
 
 ## Milestone 2 — Volume solver
 
@@ -39,7 +43,7 @@ ReactionDiffusionBifrostは、表示までを抱え込む単体ツールでは�
 ## Milestone 4 — Acceleration and production hardening
 
 - CPUタイル化とベンチマーク基準の確立
-- CUDA ping-pong backend
+- 3D Volume CUDA backendとSparse GPU表現
 - キャッシュ／再開／決定論モード
 - Maya/Bifrost対応表、サンプルグラフ、Release pack、CI成果物
 

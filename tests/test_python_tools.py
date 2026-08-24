@@ -49,6 +49,29 @@ def main() -> None:
         assert len(color) == 4
         assert all(math.isfinite(channel) and 0.0 <= channel <= 1.0 for channel in color)
 
+    color_set_calls = []
+
+    class FakeColorSetCommands:
+        @staticmethod
+        def polyColorSet(shape, **kwargs):
+            color_set_calls.append((shape, kwargs))
+
+    original_preview_commands = preview.cmds
+    preview.cmds = FakeColorSetCommands()
+    try:
+        preview._create_color_set("previewShape")
+    finally:
+        preview.cmds = original_preview_commands
+    assert color_set_calls == [(
+        "previewShape",
+        {
+            "create": True,
+            "colorSet": preview.COLOR_SET,
+            "representation": "RGBA",
+            "clamped": True,
+        },
+    )]
+
     assert bridge._array_literal([]) == "{}"
     assert bridge._array_literal([0.25, 0.5]) == "{0.25, 0.5}"
     assert bridge._array_literal([0, 1, 2], integer=True) == "{0, 1, 2}"
@@ -70,9 +93,30 @@ def main() -> None:
     ui_source = (PACKAGE_ROOT / "reaction_diffusion_bifrost" / "ui.py").read_text(encoding="utf-8")
     assert "sizeable=True" in ui_source
     assert "cmds.scrollLayout(childResizable=True" in ui_source
+    preview_source = (PACKAGE_ROOT / "reaction_diffusion_bifrost" / "preview.py").read_text(
+        encoding="utf-8"
+    )
+    assert ".createColorSetWithName(" not in preview_source
+    assert "cmds.polyColorSet(" in preview_source
     refresh_index = ui_source.index('label="Refresh Existing Output"')
     normalize_index = ui_source.index('label="Normalize preview contrast"')
     assert refresh_index < normalize_index
+    installer_source = (ROOT / "scripts" / "install_maya_module.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert 'Join-Path $versionBackup "bifrost"' in installer_source
+    assert "Preserved existing Bifrost pack" in installer_source
+    build_script_source = (ROOT / "scripts" / "build_bifrost_pack.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "ReactionDiffusionCuda.cu" in build_script_source
+    assert "RD_HAS_CUDA=1" in build_script_source
+    assert 'CUDA_ARCHITECTURES "75;86;89"' in build_script_source
+    hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "Preview 3 Python update installed successfully" in hotfix_source
+    assert "unsupported Maya 2026 createColorSetWithName" in hotfix_source
     print("ReactionDiffusion Maya Python helper tests: PASS")
 
 

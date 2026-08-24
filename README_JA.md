@@ -1,8 +1,20 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 2
+# ReactionDiffusionBifrost 0.2.0 Preview 3
 
 Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 ネイティブBifrost Solverに加え、Seed Painter、Painter→Bifrost同期、
 ビューポート表示、Reset/Step操作を一つのMaya UIにまとめています。
+
+本ツールの最終的な高速実行backendはCUDAを第一候補とします。CPUは数値参照、
+fallback、CUDA非搭載環境のために維持します。
+
+## 0.2.0 Preview 3の追加内容
+
+- Maya 2026 Python APIで利用できない`MFnMesh.createColorSetWithName`を廃止
+- Color Set作成を公式`cmds.polyColorSet`へ変更し、Refresh Existing Outputを修正
+- Pythonのみ再インストールした際も既存Bifrost Packを保持
+- CUDA Toolkit自動検出とCUDA優先Auto dispatch
+- 実験的な2D CUDA ping-pong kernelとCPU/CUDA数値比較テストを追加
+- CUDA Volume未実装時のfallback理由を明示
 
 ## 0.2.0 Preview 2の追加内容
 
@@ -128,7 +140,7 @@ rd.sync_seeds()
 ## 現在の制限
 
 - 検証済みSolver領域は2D / UVグリッドです。3D Volumeはdense CPU実装の実機検証前、メッシュ表面Laplace–Beltramiは未実装です。
-- CUDA列挙値はありますが、Preview 2の実行BackendはCPUです。
+- 2D CUDA kernelは実装済みですが、開発機にCUDA Toolkit / `nvcc`がないため未コンパイルです。現在インストール済みPackの実行BackendはCPUです。
 - シードポートが別ノードから接続済みの場合、UIは上書きせず警告を返します。
 - PreviewはMayaの頂点カラー表示で、入力メッシュへのUVテクスチャ投影は次段階です。
 - Deforming SurfaceやUVシーム接続は未実装です。
@@ -137,7 +149,7 @@ rd.sync_seeds()
 
 1. A/B配列をBifrost Simulation Stateとして保持するFeedback Compound
 2. `pattern`の入力メッシュUVへの直接表示／ベイク
-3. 2D CUDA ping-pong Backend
+3. CUDA Toolkit導入後の2D kernel実機コンパイル、CPU数値比較、benchmark
 4. Surface SolverとVolume Solver
 
 ## ビルド安全策

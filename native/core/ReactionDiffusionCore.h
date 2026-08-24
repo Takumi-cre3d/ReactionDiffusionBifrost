@@ -110,6 +110,26 @@ inline bool cuda_backend_compiled() noexcept {
 #endif
 }
 
+#if defined(RD_HAS_CUDA)
+bool cuda_device_available() noexcept;
+
+StepResult step_cuda_2d(
+    GridState& state,
+    const Parameters& parameters,
+    const std::vector<SeedSample>& seeds,
+    BoundaryMode boundary,
+    int substeps,
+    Backend requested_backend);
+#endif
+
+inline bool cuda_backend_available() noexcept {
+#if defined(RD_HAS_CUDA)
+    return cuda_device_available();
+#else
+    return false;
+#endif
+}
+
 namespace Detail {
 
 inline std::size_t wrap_index(long value, std::size_t extent) noexcept {
@@ -330,16 +350,33 @@ inline StepResult step(
     int substeps,
     Backend requested_backend = Backend::Auto,
     bool allow_cpu_fallback = true) {
-    if (requested_backend == Backend::CUDA && !cuda_backend_compiled() && !allow_cpu_fallback) {
-        throw std::runtime_error("The CUDA backend was requested but this build does not contain CUDA support.");
+#if defined(RD_HAS_CUDA)
+    if ((requested_backend == Backend::CUDA || requested_backend == Backend::Auto) &&
+        cuda_backend_available()) {
+        return step_cuda_2d(
+            state, parameters, seeds, boundary, substeps, requested_backend);
+    }
+#endif
+
+    if (requested_backend == Backend::CUDA && !allow_cpu_fallback) {
+        if (!cuda_backend_compiled()) {
+            throw std::runtime_error(
+                "The CUDA backend was requested but this build does not contain CUDA support.");
+        }
+        throw std::runtime_error(
+            "The CUDA backend was requested but no CUDA device is available.");
     }
 
     StepResult result = step_cpu(state, parameters, seeds, boundary, substeps);
     result.requested_backend = requested_backend;
-    if (requested_backend == Backend::CUDA && !cuda_backend_compiled()) {
-        result.status = "cuda_not_built_fallback_cpu";
-    } else if (requested_backend == Backend::Auto && !cuda_backend_compiled()) {
-        result.status = "auto_selected_cpu";
+    if (requested_backend == Backend::CUDA) {
+        result.status = cuda_backend_compiled()
+            ? "cuda_no_device_fallback_cpu"
+            : "cuda_not_built_fallback_cpu";
+    } else if (requested_backend == Backend::Auto) {
+        result.status = cuda_backend_compiled()
+            ? "auto_selected_cpu_no_cuda_device"
+            : "auto_selected_cpu";
     }
     return result;
 }

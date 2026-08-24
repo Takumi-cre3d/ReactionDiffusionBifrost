@@ -44,8 +44,16 @@ foreach ($requiredTool in @("preview.py", "bridge.py")) {
         throw "The 0.2.0 Python tool was not installed: $requiredTool"
     }
 }
+$installedPreview = Join-Path $destinationPackage "preview.py"
+$installedPreviewText = [IO.File]::ReadAllText($installedPreview)
+if ($installedPreviewText.Contains(".createColorSetWithName(")) {
+    throw "The unsupported Maya 2026 createColorSetWithName call is still installed."
+}
+if (-not $installedPreviewText.Contains("cmds.polyColorSet(")) {
+    throw "The Maya 2026 polyColorSet preview fix was not found after installation."
+}
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
-Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 2 UI update installed successfully."
+Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 3 Python update installed successfully."
 Write-Host "Python backup: $backupDestination"
 Write-Host "The existing native Bifrost pack was preserved."

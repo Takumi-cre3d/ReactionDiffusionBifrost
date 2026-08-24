@@ -155,6 +155,23 @@ def _normalized(values: Sequence[float], normalize: bool) -> List[float]:
     return [(value - minimum) / extent for value in values]
 
 
+def _create_color_set(shape: str) -> None:
+    """Create the preview RGBA set through Maya's supported command API.
+
+    Maya 2026's Python API 2.0 MFnMesh binding does not expose
+    createColorSetWithName, although older Maya builds did. polyColorSet is
+    available across the supported Maya versions and is only needed when the
+    preview mesh is first created; bulk color writes remain on MFnMesh.
+    """
+    cmds.polyColorSet(
+        shape,
+        create=True,
+        colorSet=COLOR_SET,
+        representation="RGBA",
+        clamped=True,
+    )
+
+
 def update_preview(
     graph: Optional[str] = None,
     width: int = 64,
@@ -183,7 +200,9 @@ def update_preview(
 
     color_sets = mesh.getColorSetNames()
     if COLOR_SET not in color_sets:
-        mesh.createColorSetWithName(COLOR_SET)
+        _create_color_set(shape)
+        # Reattach after the command modifies the mesh's color-set data.
+        mesh = om.MFnMesh(_mesh_dag_path(shape))
     mapped = _normalized(values, bool(normalize))
     colors = om.MColorArray()
     vertex_ids = om.MIntArray()

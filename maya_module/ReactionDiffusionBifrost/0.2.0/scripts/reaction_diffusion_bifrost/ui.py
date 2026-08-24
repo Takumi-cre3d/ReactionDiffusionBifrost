@@ -179,7 +179,7 @@ def show():
     CONTROLS.clear()
     window = cmds.window(
         WINDOW,
-        title="Reaction Diffusion Controller 0.2.0 Preview 2",
+        title="Reaction Diffusion Controller 0.2.0 Preview 3",
         sizeable=True,
         widthHeight=(480, 720),
     )

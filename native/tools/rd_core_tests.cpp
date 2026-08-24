@@ -102,6 +102,68 @@ void test_output_sizes() {
     require(gradient_v.size() == state.size(), "V gradient output size mismatch.");
 }
 
+void test_cuda_fallback_contract() {
+#if !defined(RD_HAS_CUDA)
+    require(!RD::cuda_backend_compiled(), "CPU-only build incorrectly reports compiled CUDA.");
+    require(!RD::cuda_backend_available(), "CPU-only build incorrectly reports an available CUDA device.");
+    RD::GridState state(16, 16);
+    RD::Parameters parameters;
+    const RD::StepResult fallback = RD::step(
+        state,
+        parameters,
+        {},
+        RD::BoundaryMode::Periodic,
+        1,
+        RD::Backend::CUDA,
+        true);
+    require(fallback.actual_backend == RD::Backend::CPU, "CUDA fallback did not use CPU.");
+    require(
+        fallback.status == "cuda_not_built_fallback_cpu",
+        "CUDA fallback status does not explain that CUDA was not built.");
+    bool rejected = false;
+    try {
+        RD::step(
+            state,
+            parameters,
+            {},
+            RD::BoundaryMode::Periodic,
+            1,
+            RD::Backend::CUDA,
+            false);
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected, "CUDA request without fallback was not rejected.");
+#endif
+}
+
+void test_cuda_matches_cpu_when_available() {
+#if defined(RD_HAS_CUDA)
+    if (!RD::cuda_backend_available()) {
+        return;
+    }
+    RD::GridState cpu_state(64, 48);
+    RD::GridState cuda_state(64, 48);
+    RD::Parameters parameters;
+    RD::SeedSample seed;
+    seed.u = 0.37f;
+    seed.v = 0.61f;
+    seed.radius = 0.08f;
+    const RD::StepResult cpu_result = RD::step(
+        cpu_state, parameters, {seed}, RD::BoundaryMode::Periodic, 80, RD::Backend::CPU, false);
+    const RD::StepResult cuda_result = RD::step(
+        cuda_state, parameters, {seed}, RD::BoundaryMode::Periodic, 80, RD::Backend::CUDA, false);
+    require(cpu_result.actual_backend == RD::Backend::CPU, "CPU parity path used the wrong backend.");
+    require(cuda_result.actual_backend == RD::Backend::CUDA, "CUDA parity path used the wrong backend.");
+    float maximum_error = 0.0f;
+    for (std::size_t index = 0; index < cpu_state.size(); ++index) {
+        maximum_error = std::max(maximum_error, std::abs(cpu_state.a[index] - cuda_state.a[index]));
+        maximum_error = std::max(maximum_error, std::abs(cpu_state.b[index] - cuda_state.b[index]));
+    }
+    require(maximum_error <= 5.0e-4f, "CUDA result differs from the CPU reference.");
+#endif
+}
+
 void test_uniform_volume_is_stationary() {
     RD::VolumeState state(12, 10, 8);
     RD::Parameters parameters;
@@ -150,6 +212,23 @@ void test_volume_concentrations_and_outputs() {
     require(gradient_z.size() == state.size(), "Volume Z gradient output size mismatch.");
 }
 
+void test_volume_cuda_contract_is_explicit() {
+    RD::VolumeState state(8, 8, 8);
+    RD::Parameters parameters;
+    const RD::StepResult fallback = RD::step_volume(
+        state,
+        parameters,
+        {},
+        RD::BoundaryMode::Periodic,
+        1,
+        RD::Backend::CUDA,
+        true);
+    require(fallback.actual_backend == RD::Backend::CPU, "Volume CUDA fallback did not use CPU.");
+    require(
+        fallback.status == "cuda_volume_not_implemented_fallback_cpu",
+        "Volume CUDA fallback status is ambiguous.");
+}
+
 } // namespace
 
 int main() {
@@ -161,11 +240,15 @@ int main() {
         test_deterministic_result();
         test_erase_seed();
         test_output_sizes();
+        test_cuda_fallback_contract();
+        test_cuda_matches_cpu_when_available();
         test_uniform_volume_is_stationary();
         test_volume_seed_wraps_periodically();
         test_volume_concentrations_and_outputs();
+        test_volume_cuda_contract_is_explicit();
         std::cout << "ReactionDiffusionCore tests: PASS\n";
         std::cout << "cudaBackendCompiled=" << (RD::cuda_backend_compiled() ? "true" : "false") << "\n";
+        std::cout << "cudaBackendAvailable=" << (RD::cuda_backend_available() ? "true" : "false") << "\n";
 #if defined(_OPENMP)
         std::cout << "openmpEnabled=true\n";
 #else

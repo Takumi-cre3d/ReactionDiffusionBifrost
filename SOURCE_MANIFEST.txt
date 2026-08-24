@@ -1,5 +1,5 @@
 name=ReactionDiffusionBifrost
-distributionVersion=0.2.0-preview2
+distributionVersion=0.2.0-preview3
 productVersion=0.2.0
 packVersion=0.2.0
 mayaModuleVersion=0.2.0
@@ -8,6 +8,7 @@ bifrostValidatedBaseline=2.15.0.0
 
 native/core/ReactionDiffusionCore.h
 native/core/ReactionDiffusionVolumeCore.h
+native/cuda/ReactionDiffusionCuda.cu
 native/bifrost/ReactionDiffusion.h
 native/bifrost/ReactionDiffusion.cpp
 native/tools/rd_core_tests.cpp
@@ -28,6 +29,7 @@ scripts/build_bifrost_pack.ps1
 scripts/verify_install.ps1
 scripts/apply_python_hotfix.ps1
 tests/test_python_tools.py
+tests/test_maya_preview_color_set.py
 
 README_JA.md
 VALIDATION_REPORT.md
@@ -42,3 +44,5 @@ Notes:
 - Preview 2 adds a resizable scroll layout and moves Refresh Existing Output above the fold.
 - Step uses deterministic total-substep recomputation; state feedback is scheduled next.
 - The development baseline adds experimental dense 3D volume CPU operators; Maya/Bifrost runtime validation is pending.
+- Preview 3 fixes Maya 2026 color-set creation and preserves installed native packs during Python reinstalls.
+- Preview 3 adds optional CUDA detection, CUDA-first Auto dispatch and an experimental 2D ping-pong kernel.

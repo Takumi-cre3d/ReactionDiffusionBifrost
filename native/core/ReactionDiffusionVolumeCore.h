@@ -275,15 +275,15 @@ inline StepResult step_volume(
     int substeps,
     Backend requested_backend = Backend::Auto,
     bool allow_cpu_fallback = true) {
-    if (requested_backend == Backend::CUDA && !cuda_backend_compiled() && !allow_cpu_fallback) {
-        throw std::runtime_error("The CUDA backend was requested but this build does not contain CUDA support.");
+    if (requested_backend == Backend::CUDA && !allow_cpu_fallback) {
+        throw std::runtime_error("The CUDA volume backend is not implemented yet.");
     }
     StepResult result = step_volume_cpu(state, parameters, seeds, boundary, substeps);
     result.requested_backend = requested_backend;
-    if (requested_backend == Backend::CUDA && !cuda_backend_compiled()) {
-        result.status = "cuda_not_built_fallback_cpu";
-    } else if (requested_backend == Backend::Auto && !cuda_backend_compiled()) {
-        result.status = "auto_selected_cpu";
+    if (requested_backend == Backend::CUDA) {
+        result.status = "cuda_volume_not_implemented_fallback_cpu";
+    } else if (requested_backend == Backend::Auto) {
+        result.status = "auto_selected_cpu_volume";
     }
     return result;
 }

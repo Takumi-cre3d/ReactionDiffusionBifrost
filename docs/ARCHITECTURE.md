@@ -7,7 +7,7 @@
 3. `maya_module` — インストール、Seed Painter、グラフ同期、表示専用プレビュー
 4. `scripts` — SDK packのビルド、インストール、整合性検証
 
-数値式をUIやBifrostラッパーへ重複実装しません。将来のSurface / Volume / CUDA backendも、参照CPU実装に対して同じ入力から比較可能にします。
+数値式をUIやBifrostラッパーへ重複実装しません。Surface / Volume / CUDA backendも、参照CPU実装に対して同じ入力から比較可能にします。2D CUDA sourceはCPUと同じ式・Stencil・境界契約を持ち、CUDA build時の自動parity testで検証します。
 
 ## 2Dデータ契約
 
