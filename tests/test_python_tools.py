@@ -94,7 +94,7 @@ def main() -> None:
     assert "sizeable=True" in ui_source
     assert "cmds.scrollLayout(childResizable=True" in ui_source
     assert 'label="Create Sample Graph + Visible Pattern"' in ui_source
-    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 6"' in ui_source
+    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 7"' in ui_source
     assert 'label="Create Stateful Playback Graph"' in ui_source
     assert "om.MDGMessage.addForceUpdateCallback(_on_dg_time_changed)" in ui_source
     assert 'event=("timeChanged", _refresh_on_time_changed)' not in ui_source
@@ -120,6 +120,7 @@ def main() -> None:
     assert "cmds.polyColorSet(" in preview_source
     assert "mesh.setCurrentColorSetName(COLOR_SET)" in preview_source
     assert "mesh.setVertexColors(colors, vertex_ids)" in preview_source
+    assert "cmds.dgdirty(graph_shape)" in preview_source
     assert "mesh.setVertexColors(colors, vertex_ids, COLOR_SET)" not in preview_source
     refresh_index = ui_source.index('label="Refresh Existing Output"')
     normalize_index = ui_source.index('label="Normalize preview contrast"')
@@ -141,7 +142,7 @@ def main() -> None:
     hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
         encoding="utf-8"
     )
-    assert "Preview 6 Python update installed successfully" in hotfix_source
+    assert "Preview 7 Python update installed successfully" in hotfix_source
     assert "unsupported Maya 2026 createColorSetWithName" in hotfix_source
     native_header = (ROOT / "native" / "bifrost" / "ReactionDiffusion.h").read_text(
         encoding="utf-8"
@@ -154,7 +155,7 @@ def main() -> None:
         assert state_operator in native_header
         assert state_operator in build_script_source
     manifest_source = (ROOT / "SOURCE_MANIFEST.txt").read_text(encoding="utf-8")
-    assert "distributionVersion=0.2.0-preview6" in manifest_source
+    assert "distributionVersion=0.2.0-preview7" in manifest_source
     assert "tests/test_maya_bifrost_stateful.py" in manifest_source
     assert "tests/test_maya_playback_callback.py" in manifest_source
     print("ReactionDiffusion Maya Python helper tests: PASS")

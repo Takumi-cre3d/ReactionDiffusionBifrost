@@ -14,7 +14,6 @@ WINDOW = "reactionDiffusionBifrostWindow"
 CONTROLS = {}
 _TIME_REFRESH_BUSY = False
 _TIME_CALLBACK_ID = None
-_LAST_PREVIEW_KEY = None
 
 
 def _status(message: str) -> None:
@@ -171,16 +170,13 @@ def _is_stateful_graph(graph: str) -> bool:
 
 
 def _refresh_on_time_changed(refresh_viewport: bool = True) -> None:
-    global _TIME_REFRESH_BUSY, _LAST_PREVIEW_KEY
+    global _TIME_REFRESH_BUSY
     if _TIME_REFRESH_BUSY or not CONTROLS.get("graph"):
         return
     graph_text = cmds.textField(CONTROLS["graph"], query=True, text=True).strip()
     if not _is_stateful_graph(graph_text):
         return
     frame = float(cmds.currentTime(query=True))
-    preview_key = (graph_text, frame)
-    if not refresh_viewport and preview_key == _LAST_PREVIEW_KEY:
-        return
     _TIME_REFRESH_BUSY = True
     try:
         settings = _simulation_settings()
@@ -192,7 +188,6 @@ def _refresh_on_time_changed(refresh_viewport: bool = True) -> None:
             refresh_viewport=refresh_viewport,
         )
         backend = cmds.getAttr(f"{graph_text}.backend_used")
-        _LAST_PREVIEW_KEY = preview_key
         _status(
             f"State frame {frame:g}: {mesh}    {backend}")
     except (RuntimeError, ValueError):
@@ -308,7 +303,7 @@ def show():
     CONTROLS.clear()
     window = cmds.window(
         WINDOW,
-        title="Reaction Diffusion Controller 0.2.0 Preview 6",
+        title="Reaction Diffusion Controller 0.2.0 Preview 7",
         sizeable=True,
         widthHeight=(480, 720),
     )

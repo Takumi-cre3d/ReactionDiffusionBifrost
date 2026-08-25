@@ -1,4 +1,4 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 6
+# ReactionDiffusionBifrost 0.2.0 Preview 7
 
 Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 ネイティブBifrost Solverに加え、Seed Painter、Painter→Bifrost同期、
@@ -7,11 +7,18 @@ Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 本ツールの最終的な高速実行backendはCUDAを第一候補とします。CPUは数値参照、
 fallback、CUDA非搭載環境のために維持します。
 
+## 0.2.0 Preview 7の追加内容
+
+- Feedback Graphのトップレベル配列キャッシュを各時刻変更で明示的にdirty化
+- 製品コード自身の評価だけで0→1→2→0のPattern進行とResetを保証
+- 同一フレーム番号の更新省略を撤去し、再生後の0フレームResetを修正
+- Maya 2026 / Bifrost / CUDAで時刻通知から頂点カラーまでの統合テストを追加
+
 ## 0.2.0 Preview 6の追加内容
 
 - 再生中にイベントが抑止される`scriptJob`の`timeChanged`依存を廃止
 - Maya DGの`addForceUpdateCallback`で連続再生中も各フレームのPatternを表示
-- 再生中の再帰的なViewport refreshと同一フレームの重複更新を抑止
+- 再生中の再帰的なViewport refreshを抑止
 - UIを閉じた際にMaya API callbackを確実に解除
 
 ## 0.2.0 Preview 5の追加内容

@@ -63,6 +63,9 @@ if ($installedPreviewText.Contains("mesh.setVertexColors(colors, vertex_ids, COL
 if (-not $installedPreviewText.Contains("mesh.setCurrentColorSetName(COLOR_SET)")) {
     throw "The Maya 2026 current color-set selection fix was not found after installation."
 }
+if (-not $installedPreviewText.Contains("cmds.dgdirty(graph_shape)")) {
+    throw "The Preview 7 timeline graph evaluation fix was not found after installation."
+}
 $installedUiText = [IO.File]::ReadAllText($installedUi)
 if (-not $installedUiText.Contains("Create Sample Graph + Visible Pattern")) {
     throw "The Preview 4 visible sample button was not found after installation."
@@ -83,6 +86,6 @@ if (-not $installedGraphSetupText.Contains("reaction_diffusion_state_step")) {
 }
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
-Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 6 Python update installed successfully."
+Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 7 Python update installed successfully."
 Write-Host "Python backup: $backupDestination"
 Write-Host "The existing native Bifrost pack was preserved."

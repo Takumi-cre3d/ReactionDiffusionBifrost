@@ -7,7 +7,7 @@ Maya 2026 / Bifrost 2.15向けの、Gray–Scott反応拡散シミュレーシ�
 ## 現在地
 
 `0.2.0-preview2`を引き継ぎ元の正本としてリポジトリ化し、現在は
-`0.2.0-preview6`を開発しています。最終的な高速実行経路はCUDAを第一候補とし、
+`0.2.0-preview7`を開発しています。最終的な高速実行経路はCUDAを第一候補とし、
 CPU実装は数値参照・fallback・CUDAを持たない環境向けとして維持します。
 
 - C++17のGray–Scott CPUソルバー（OpenMP対応）

@@ -30,12 +30,12 @@ def main() -> None:
         from reaction_diffusion_bifrost import graph_setup, preview
 
         width, height = 32, 24
-        cmds.currentTime(1)
+        cmds.currentTime(0)
         created = graph_setup.create_stateful_preview_graph(
             width=width,
             height=height,
             substeps_per_frame=12,
-            start_frame=1,
+            start_frame=0,
         )
         graph = created["graph"]
         simulation = created["simulation_node"]
@@ -45,9 +45,9 @@ def main() -> None:
             cmds.vnnNode(graph, simulation, queryPortDataType="out_state"),
         )
         patterns = {}
-        for frame in (1, 2, 3):
+        for frame in (0, 1, 2):
             cmds.currentTime(frame)
-            cmds.dgdirty(graph)
+            preview.update_preview(graph, width, height, normalize=True)
             pattern = preview.read_pattern(graph)
             state = preview._flatten_numbers(cmds.getAttr(f"{graph}.state"))
             if len(pattern) != width * height:
@@ -60,9 +60,9 @@ def main() -> None:
                 f"stateSize={len(state)}"
             )
 
+        difference_01 = max(abs(a - b) for a, b in zip(patterns[0], patterns[1]))
         difference_12 = max(abs(a - b) for a, b in zip(patterns[1], patterns[2]))
-        difference_23 = max(abs(a - b) for a, b in zip(patterns[2], patterns[3]))
-        if difference_12 <= 1.0e-6 or difference_23 <= 1.0e-6:
+        if difference_01 <= 1.0e-6 or difference_12 <= 1.0e-6:
             raise AssertionError("Feedback pattern did not advance on consecutive frames.")
         backend = cmds.getAttr(f"{graph}.backend_used")
         status = cmds.getAttr(f"{graph}.status")
@@ -75,18 +75,18 @@ def main() -> None:
 
         # Returning to the start frame must select the initialized state rather
         # than retaining a future feedback value.
-        cmds.currentTime(1)
-        cmds.dgdirty(graph)
+        cmds.currentTime(0)
+        preview.update_preview(graph, width, height, normalize=True)
         reset_pattern = preview.read_pattern(graph)
-        reset_error = max(abs(a - b) for a, b in zip(patterns[1], reset_pattern))
+        reset_error = max(abs(a - b) for a, b in zip(patterns[0], reset_pattern))
         if reset_error > 1.0e-7:
             raise AssertionError(f"Start-frame reset mismatch: {reset_error}")
 
         print("ReactionDiffusion Bifrost Feedback State integration: PASS")
         print(f"backendUsed={backend}")
         print(f"status={status}")
+        print(f"frameDifference01={difference_01:.7f}")
         print(f"frameDifference12={difference_12:.7f}")
-        print(f"frameDifference23={difference_23:.7f}")
         print(f"resetMaximumError={reset_error:.7f}")
     finally:
         if not already:

@@ -181,6 +181,13 @@ def update_preview(
 ) -> str:
     """Evaluate the graph and display its pattern on a colored polygon plane."""
     graph_shape = resolve_graph(graph)
+    # A Bifrost graph with internal Feedback State does not expose Maya time as
+    # an ordinary DG input plug. During interactive playback Maya can therefore
+    # reuse the cached top-level array even though the evaluation context moved
+    # to a new frame. Explicitly dirty the graph before requesting ``pattern``
+    # so playback, scrubbing and a jump back to the start frame all evaluate in
+    # the current time context.
+    cmds.dgdirty(graph_shape)
     values = read_pattern(graph_shape)
     expected = int(width) * int(height)
     if len(values) != expected:

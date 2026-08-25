@@ -1,5 +1,5 @@
 name=ReactionDiffusionBifrost
-distributionVersion=0.2.0-preview6
+distributionVersion=0.2.0-preview7
 productVersion=0.2.0
 packVersion=0.2.0
 mayaModuleVersion=0.2.0
@@ -53,3 +53,4 @@ Notes:
 - Preview 4 adds one-click native graph and visible-pattern creation.
 - Preview 5 keeps Native Operators stateless while Bifrost owns frame-to-frame feedback caches.
 - Preview 6 replaces playback-suppressed scriptJob events with an MDG force-update callback.
+- Preview 7 explicitly dirties cached Bifrost outputs on every timeline evaluation and reset.
