@@ -47,7 +47,20 @@ def main():
             backend=cmds.getAttr(graph+'.backend_used')
             assert backend=='CUDA',(domain,backend,cmds.getAttr(graph+'.status'))
             print(domain+' feedback/CUDA/reset/gradients: PASS',flush=True)
+        cmds.currentTime(0)
+        source=cmds.polyPlane(width=4,height=4,subdivisionsX=8,subdivisionsY=8)[0]
+        cmds.setAttr(source+'.translate',10,4,2,type='double3')
+        cmds.setAttr(source+'.scale',2,2,2,type='double3')
+        transformed=spatial.create_surface_graph(source,start_frame=0,substeps=2)
+        cmds.dgdirty(transformed['graph'])
+        values=preview.read_pattern(transformed['graph'])
+        print('transformed surface first position',preview._flatten_numbers(cmds.getAttr(transformed['graph']+'.surface_positions'))[:3],flush=True)
+        assert max(values)>.1,'Transformed mesh seed missed the imported geometry'
+        print('Translated/scaled source seed: PASS',flush=True)
     finally:
+        # Dispose this test's graph before unloading Bifrost's runtime.
+        import maya.cmds as cmds
+        cmds.file(new=True,force=True)
         maya.standalone.uninitialize()
 
 

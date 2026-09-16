@@ -12,7 +12,7 @@ def create_graph(domain, positions=(), triangles=(), dimensions=(24, 24, 24),
                  substeps=8, start_frame=0.0, seed_position=None, seed_radius=None):
     """Create Surface/Volume native feedback with editable top-level inputs.
 
-    Surface positions and seeds share object-space units. Volume seeds use
+    Surface positions and seeds share the same coordinate space. Volume seeds use
     normalized coordinates. All exposed A/B outputs can feed later operators.
     """
     if domain not in ("surface", "volume"):
@@ -163,7 +163,9 @@ def mesh_arrays(mesh):
     if path.node().hasFn(om.MFn.kTransform):
         path.extendToShape()
     function = om.MFnMesh(path)
-    positions = [v for p in function.getPoints(om.MSpace.kObject) for v in (p.x, p.y, p.z)]
+    # Maya input-by-path imports point positions in world space. Seed positions
+    # and radii must use that same space, including non-identity transforms.
+    positions = [v for p in function.getPoints(om.MSpace.kWorld) for v in (p.x, p.y, p.z)]
     _, triangles = function.getTriangles()
     return positions, list(triangles)
 

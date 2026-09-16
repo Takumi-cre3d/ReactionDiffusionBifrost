@@ -20,6 +20,9 @@
   dirtied after API color writes. Solver array outputs are still explicitly
   dirtied. No global evaluation-mode workaround is required.
 - Surface/Volume A/B, gradients, state continuation and reset: PASS.
+- Translated/scaled Maya mesh: the initial seed used object coordinates while
+  input-by-path imported world coordinates. Identical transformed-mesh fixture
+  fails before, passes after deriving seed positions/radius from world positions.
 - Timed seed replay, native presets, image dimensions, EXR writing through
   standard write_texture, points→volume→nonempty Maya mesh: PASS.
 - Existing Maya color-set / 2D CUDA / feedback / callback checks: PASS.
