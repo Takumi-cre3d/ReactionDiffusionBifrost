@@ -267,6 +267,11 @@ inline StepResult step_volume_cpu(
     return result;
 }
 
+#if defined(RD_HAS_CUDA)
+StepResult step_cuda_volume(VolumeState&, const Parameters&,
+    const std::vector<VolumeSeedSample>&, BoundaryMode, int, Backend);
+#endif
+
 inline StepResult step_volume(
     VolumeState& state,
     const Parameters& parameters,
@@ -275,13 +280,19 @@ inline StepResult step_volume(
     int substeps,
     Backend requested_backend = Backend::Auto,
     bool allow_cpu_fallback = true) {
+#if defined(RD_HAS_CUDA)
+    if (requested_backend != Backend::CPU && cuda_backend_available()) {
+        return step_cuda_volume(state, parameters, seeds, boundary, substeps, requested_backend);
+    }
+#endif
     if (requested_backend == Backend::CUDA && !allow_cpu_fallback) {
-        throw std::runtime_error("The CUDA volume backend is not implemented yet.");
+        throw std::runtime_error("CUDA volume backend unavailable in this build or device.");
     }
     StepResult result = step_volume_cpu(state, parameters, seeds, boundary, substeps);
     result.requested_backend = requested_backend;
     if (requested_backend == Backend::CUDA) {
-        result.status = "cuda_volume_not_implemented_fallback_cpu";
+        result.status = cuda_backend_compiled()
+            ? "cuda_no_device_fallback_cpu" : "cuda_not_built_fallback_cpu";
     } else if (requested_backend == Backend::Auto) {
         result.status = "auto_selected_cpu_volume";
     }

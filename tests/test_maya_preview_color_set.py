@@ -37,6 +37,7 @@ def main() -> None:
         height = 3
         expected = width * height
         values = [index / float(expected - 1) for index in range(expected)]
+        cmds.createNode("transform", name="rdTestGraph")
         preview.resolve_graph = lambda _graph=None: "rdTestGraph"
         preview.read_pattern = lambda _graph: values
         transform = preview.update_preview("rdTestGraph", width, height)

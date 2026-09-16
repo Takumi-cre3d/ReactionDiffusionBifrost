@@ -15,6 +15,7 @@
 #include <Amino/Core/Ptr.h>
 #include <Amino/Core/String.h>
 #include <Amino/Cpp/Annotate.h>
+#include <Bifrost/Math/Types.h>
 
 // Export the operator entry points directly. The Bifrost SDK sample normally
 // supplies this through a generated *Export.h header, but making it explicit
@@ -51,6 +52,35 @@ enum class AMINO_ANNOTATE("Amino::Enum") SeedMode {
 
 using FloatArray = Amino::Array<float>;
 using IntArray = Amino::Array<int>;
+using VectorArray = Amino::Array<Bifrost::Math::float3>;
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_samples(
+    Amino::Ptr<FloatArray> const& pattern, Amino::Ptr<FloatArray> const& positions,
+    int width, int height, int depth, float threshold, float point_radius,
+    Amino::Ptr<VectorArray>& point_position, Amino::Ptr<FloatArray>& point_size,
+    Amino::Ptr<FloatArray>& point_pattern) AMINO_ANNOTATE("Amino::Node");
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_pixels(
+    Amino::Ptr<FloatArray> const& pattern,
+    Amino::Ptr<Amino::Array<Bifrost::Math::float4>>& pixels) AMINO_ANNOTATE("Amino::Node");
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_mesh_data(
+    Amino::Ptr<VectorArray> const& point_position,
+    Amino::Ptr<Amino::Array<unsigned int>> const& face_vertex,
+    Amino::Ptr<FloatArray>& positions, Amino::Ptr<IntArray>& triangles) AMINO_ANNOTATE("Amino::Node");
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_preset(
+    int preset, float& feed_rate, float& kill_rate, float& diffusion_a,
+    float& diffusion_b, bool& valid) AMINO_ANNOTATE("Amino::Node");
+
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_seed_events(
+    float frame, Amino::Ptr<FloatArray> const& frames,
+    Amino::Ptr<FloatArray> const& positions, Amino::Ptr<FloatArray> const& radii,
+    Amino::Ptr<FloatArray> const& strengths, Amino::Ptr<IntArray> const& modes,
+    Amino::Ptr<FloatArray>& seed_positions, Amino::Ptr<FloatArray>& seed_u,
+    Amino::Ptr<FloatArray>& seed_v, Amino::Ptr<FloatArray>& seed_w,
+    Amino::Ptr<FloatArray>& seed_radius, Amino::Ptr<FloatArray>& seed_strength,
+    Amino::Ptr<IntArray>& seed_mode, Amino::String& status) AMINO_ANNOTATE("Amino::Node");
 
 REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_initialize_grid(
     int width,
@@ -171,6 +201,37 @@ REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_volume_step(
     Amino::String& backend_used,
     Amino::String& status,
     float& elapsed_milliseconds)
+    AMINO_ANNOTATE("Amino::Node");
+
+// Positions and seed_positions are interleaved XYZ arrays; triangles are
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_pack_state(
+    Amino::Ptr<FloatArray> const& concentration_a, Amino::Ptr<FloatArray> const& concentration_b,
+    Amino::Ptr<FloatArray>& state) AMINO_ANNOTATE("Amino::Node");
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_unpack_state(
+    Amino::Ptr<FloatArray> const& state,
+    Amino::Ptr<FloatArray>& concentration_a, Amino::Ptr<FloatArray>& concentration_b)
+    AMINO_ANNOTATE("Amino::Node");
+
+// Positions and seed_positions are interleaved XYZ arrays; triangles are
+// zero-based vertex triples. Empty A/B initializes A=1, B=0.
+REACTION_DIFFUSION_NODE_EXPORT void reaction_diffusion_surface_step(
+    Amino::Ptr<FloatArray> const& positions,
+    Amino::Ptr<IntArray> const& triangles,
+    Amino::Ptr<FloatArray> const& concentration_a,
+    Amino::Ptr<FloatArray> const& concentration_b,
+    float feed_rate, float kill_rate, float diffusion_a, float diffusion_b,
+    float time_step, int substeps, Backend backend,
+    Amino::Ptr<FloatArray> const& seed_positions,
+    Amino::Ptr<FloatArray> const& seed_radius,
+    Amino::Ptr<FloatArray> const& seed_strength,
+    Amino::Ptr<IntArray> const& seed_mode,
+    Amino::Ptr<FloatArray>& out_concentration_a,
+    Amino::Ptr<FloatArray>& out_concentration_b,
+    Amino::Ptr<FloatArray>& pattern,
+    Amino::Ptr<FloatArray>& gradient_x,
+    Amino::Ptr<FloatArray>& gradient_y,
+    Amino::Ptr<FloatArray>& gradient_z,
+    Amino::String& backend_used, Amino::String& status, float& elapsed_milliseconds)
     AMINO_ANNOTATE("Amino::Node");
 
 } // namespace ReactionDiffusion

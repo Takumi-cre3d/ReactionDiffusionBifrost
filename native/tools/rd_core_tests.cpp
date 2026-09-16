@@ -255,9 +255,40 @@ void test_volume_cuda_contract_is_explicit() {
         1,
         RD::Backend::CUDA,
         true);
+    if (RD::cuda_backend_available()) {
+        require(fallback.actual_backend == RD::Backend::CUDA, "Volume CUDA dispatch failed.");
+        for (auto boundary : {RD::BoundaryMode::Periodic, RD::BoundaryMode::NoFlux, RD::BoundaryMode::FixedInitial}) {
+            RD::VolumeState cpu(11, 9, 7), gpu(11, 9, 7);
+            RD::VolumeSeedSample seed;
+            seed.u = 0.02f; seed.radius = 0.3f;
+            RD::step_volume(cpu, parameters, {seed}, boundary, 40, RD::Backend::CPU);
+            RD::step_volume(gpu, parameters, {seed}, boundary, 40, RD::Backend::CUDA, false);
+            float error = 0;
+            for (std::size_t i = 0; i < cpu.size(); ++i) {
+                error = std::max(error, std::abs(cpu.a[i] - gpu.a[i]));
+                error = std::max(error, std::abs(cpu.b[i] - gpu.b[i]));
+            }
+            require(error < 2e-5f, "Volume CPU/CUDA mismatch.");
+            std::cout << "volumeCudaMaximumError=" << error << "\n";
+        }
+        RD::VolumeState cpu(24,24,24),gpu(24,24,24);
+        RD::VolumeSeedSample center;center.radius=.15f;
+        RD::Parameters playback_parameters;
+        playback_parameters.feed_rate=.055f;playback_parameters.kill_rate=.062f;
+        RD::step_volume(cpu,playback_parameters,{center},RD::BoundaryMode::Periodic,64,RD::Backend::CPU);
+        RD::step_volume(gpu,playback_parameters,{center},RD::BoundaryMode::Periodic,64,RD::Backend::CUDA,false);
+        float playback_error=0;
+        for (std::size_t i=0;i<cpu.size();++i) {
+            playback_error=std::max(playback_error,std::abs(cpu.a[i]-gpu.a[i]));
+            playback_error=std::max(playback_error,std::abs(cpu.b[i]-gpu.b[i]));
+        }
+        require(playback_error<2e-5f,"Volume playback CPU/CUDA mismatch.");
+        std::cout<<"volumePlaybackMaximumError="<<playback_error<<'\n';
+        return;
+    }
     require(fallback.actual_backend == RD::Backend::CPU, "Volume CUDA fallback did not use CPU.");
     require(
-        fallback.status == "cuda_volume_not_implemented_fallback_cpu",
+        fallback.status == (RD::cuda_backend_compiled() ? "cuda_no_device_fallback_cpu" : "cuda_not_built_fallback_cpu"),
         "Volume CUDA fallback status is ambiguous.");
 }
 

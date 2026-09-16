@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 import maya.cmds as cmds
@@ -83,8 +85,21 @@ def set_grid_dimensions(graph: Optional[str], width: int, height: int) -> str:
 def sync_painted_seeds(graph: Optional[str] = None) -> Dict[str, int]:
     """Write the stored Painter arrays into unconnected native step-node ports."""
     graph_shape = preview.resolve_graph(graph)
-    step_node = find_step_node(graph_shape)
     arrays = payload.flatten_for_bifrost()
+    if cmds.objExists(graph_shape+".state"):
+        from .seed_events import set_events
+        if cmds.attributeQuery("rdDomain", node=graph_shape, exists=True):
+            raise ValueError("UV Painter targets 2D graphs; use XYZ seed events for Surface/Volume")
+        frame=float(cmds.currentTime(query=True))+1
+        previous=json.loads(cmds.getAttr(graph_shape+".rdSeedEvents")) if cmds.objExists(graph_shape+".rdSeedEvents") else []
+        events=[e for e in previous if e["frame"]!=frame]
+        for i,u in enumerate(arrays["seed_u"]):
+            events.append({"frame":frame,"position":[u,arrays["seed_v"][i],0],
+                           "radius":arrays["seed_radius"][i],"strength":arrays["seed_strength"][i],
+                           "mode":arrays["seed_mode"][i]})
+        set_events(graph_shape,events)
+        return {"strokes":payload.counts()[0],"samples":len(arrays["seed_u"])}
+    step_node = find_step_node(graph_shape)
     for port in SEED_PORTS:
         _set_port_default(
             graph_shape,
@@ -116,7 +131,16 @@ def evaluate(
     sync_seeds: bool = True,
 ) -> Dict[str, Any]:
     """Configure, evaluate, and visualize the deterministic 2D simulation."""
-    graph_shape = set_grid_dimensions(graph, width, height)
+    graph_shape = preview.resolve_graph(graph)
+    if cmds.objExists(graph_shape+".state"):
+        if sync_seeds:
+            sync_painted_seeds(graph_shape)
+        mesh=preview.update_preview(graph_shape,width,height,normalize)
+        return {"graph":graph_shape,"preview":mesh,"steps":0,
+                "pattern_size":len(preview.read_pattern(graph_shape)),
+                "backend_used":cmds.getAttr(graph_shape+".backend_used"),
+                "elapsed_milliseconds":cmds.getAttr(graph_shape+".elapsed_milliseconds")}
+    graph_shape = set_grid_dimensions(graph_shape, width, height)
     if sync_seeds:
         sync_painted_seeds(graph_shape)
     set_total_steps(graph_shape, total_steps)

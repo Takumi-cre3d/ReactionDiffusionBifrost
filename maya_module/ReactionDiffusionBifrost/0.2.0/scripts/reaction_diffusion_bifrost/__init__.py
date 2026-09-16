@@ -3,6 +3,16 @@
 __version__ = "0.2.0"
 
 
+def create_surface_graph(mesh, **kwargs):
+    from .spatial import create_surface_graph as create
+    return create(mesh, **kwargs)
+
+
+def create_volume_graph(**kwargs):
+    from .spatial import create_volume_graph as create
+    return create(**kwargs)
+
+
 def show():
     from .ui import show as show_ui
     return show_ui()

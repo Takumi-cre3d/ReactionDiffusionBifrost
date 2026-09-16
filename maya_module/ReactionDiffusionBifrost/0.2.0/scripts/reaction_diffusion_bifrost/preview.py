@@ -181,12 +181,10 @@ def update_preview(
 ) -> str:
     """Evaluate the graph and display its pattern on a colored polygon plane."""
     graph_shape = resolve_graph(graph)
-    # A Bifrost graph with internal Feedback State does not expose Maya time as
-    # an ordinary DG input plug. During interactive playback Maya can therefore
-    # reuse the cached top-level array even though the evaluation context moved
-    # to a new frame. Explicitly dirty the graph before requesting ``pattern``
-    # so playback, scrubbing and a jump back to the start frame all evaluate in
-    # the current time context.
+    if cmds.attributeQuery("rdDomain", node=graph_shape, exists=True):
+        from . import spatial
+        return spatial.update_preview(graph_shape, normalize, refresh_viewport)
+    # Refresh array plugs as well as the graph's viewport geometry output.
     cmds.dgdirty(graph_shape)
     values = read_pattern(graph_shape)
     expected = int(width) * int(height)
@@ -206,6 +204,14 @@ def update_preview(
         shape = _create_preview_mesh(int(width), int(height))
         mesh = om.MFnMesh(_mesh_dag_path(shape))
 
+    write_colors(shape, values, normalize, refresh_viewport)
+    return PREVIEW_MESH
+
+
+def write_colors(shape, values, normalize=False, refresh_viewport=True):
+    mesh = om.MFnMesh(_mesh_dag_path(shape))
+    if mesh.numVertices != len(values):
+        raise ValueError("Color values must match mesh vertex count")
     color_sets = mesh.getColorSetNames()
     if COLOR_SET not in color_sets:
         _create_color_set(shape)
@@ -220,10 +226,11 @@ def update_preview(
     # Maya API 2.0 does not accept a color-set name as the third argument to
     # setVertexColors. In Maya 2026 that position is an optional MDGModifier.
     # Select the target set first, then let the bulk write use the current set.
-    mesh.setCurrentColorSetName(COLOR_SET)
+    if mesh.currentColorSetName() != COLOR_SET:
+        mesh.setCurrentColorSetName(COLOR_SET)
     mesh.setVertexColors(colors, vertex_ids)
-    cmds.setAttr(f"{shape}.displayColors", 1)
-    cmds.dgdirty(shape)
+    if not cmds.getAttr(f"{shape}.displayColors"):
+        cmds.setAttr(f"{shape}.displayColors", 1)
     if refresh_viewport:
         cmds.refresh(force=True)
     return PREVIEW_MESH

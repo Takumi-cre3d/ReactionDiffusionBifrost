@@ -72,4 +72,5 @@ Preview 5ではBifrost Feedback Stateにより初期フレームからの全履�
 ただしCUDA kernelはOperator呼び出しごとにDeviceメモリを確保し、A/BをHostとDevice間で
 転送します。長いsubstepでは高速化を見込めますが、最終形ではありません。次段階で
 GPU常駐A/B bufferを導入してフレーム間の再確保・再転送をなくします。
-3D Volume CUDAはその後、同じbackend契約へ追加します。
+Preview 8では3D VolumeとSurfaceもCUDA backendに対応しました。CPUとの丸め差を抑えるため
+CUDAのFMA融合を無効化しています。GPU常駐化・Sparse GPU表現は未実装です。

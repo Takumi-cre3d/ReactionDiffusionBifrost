@@ -17,6 +17,10 @@ $bridgeTool = Join-Path $versionRoot "scripts\reaction_diffusion_bifrost\bridge.
 $graphSetupTool = Join-Path $versionRoot "scripts\reaction_diffusion_bifrost\graph_setup.py"
 
 $checks = @(
+    @{ Name = "Spatial graph tools"; Path = (Join-Path $versionRoot 'scripts/reaction_diffusion_bifrost/spatial.py') },
+    @{ Name = "Seed events"; Path = (Join-Path $versionRoot 'scripts/reaction_diffusion_bifrost/seed_events.py') },
+    @{ Name = "Output adapters"; Path = (Join-Path $versionRoot 'scripts/reaction_diffusion_bifrost/outputs.py') },
+    @{ Name = "Preset tools"; Path = (Join-Path $versionRoot 'scripts/reaction_diffusion_bifrost/presets.py') },
     @{ Name = "Maya module file"; Path = $moduleFile },
     @{ Name = "Python interaction package"; Path = $pythonPackage },
     @{ Name = "Viewport preview controller"; Path = $previewTool },
@@ -43,7 +47,16 @@ $operatorJsonText = [IO.File]::ReadAllText($operatorJson)
 foreach ($stateOperator in @(
     "reaction_diffusion_initialize_state",
     "reaction_diffusion_state_step",
-    "reaction_diffusion_state_outputs"
+    "reaction_diffusion_state_outputs",
+    "reaction_diffusion_volume_step",
+    "reaction_diffusion_surface_step",
+    "reaction_diffusion_pack_state",
+    "reaction_diffusion_unpack_state",
+    "reaction_diffusion_preset",
+    "reaction_diffusion_seed_events",
+    "reaction_diffusion_samples",
+    "reaction_diffusion_pixels",
+    "reaction_diffusion_mesh_data"
 )) {
     if (-not $operatorJsonText.Contains($stateOperator)) {
         throw "Installed Bifrost definition is missing Feedback State operator: $stateOperator"

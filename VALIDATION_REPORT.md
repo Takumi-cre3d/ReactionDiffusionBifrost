@@ -1,4 +1,45 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 7 Validation
+# ReactionDiffusionBifrost 0.2.0 Preview 8 Validation
+
+## Core completion checks (2026-09-17)
+
+- CPU-only and CUDA builds: CTest 2/2 each. Existing 2D CPU behavior preserved.
+- 2D / Volume (3 boundary modes, plus 24³ x 64 steps) / Surface (planar and
+  curved 99-vertex mesh): CPU/CUDA maximum errors 0 with FMA fusion disabled.
+  Before this change, the identical 24³ playback fixture exceeded the existing
+  2e-5 tolerance (3.06368e-5). The tolerance was not relaxed.
+- Maya 2026 / Bifrost 2.15 native pack builds and all operator exports verified.
+- Installed package under Documents/maya/modules verified by DLL hash and
+  separate interactive Maya processes using an isolated preference directory.
+- Real Play, parallel evaluation, every frame 0→8→0:
+  Grid CPU error 0; deforming Surface 2.91038e-11; Volume 0. Full-array reset
+  error 0 in all three domains. Unlike earlier tests, these run `cmds.play`
+  and compare every frame with CPU results, including the production preview.
+- Playback root cause: repeated display flag / color-set updates and explicit
+  dirtying of the display mesh invalidated evaluation during playback. Display
+  settings are now changed only when necessary, and the mesh is not explicitly
+  dirtied after API color writes. Solver array outputs are still explicitly
+  dirtied. No global evaluation-mode workaround is required.
+- Surface/Volume A/B, gradients, state continuation and reset: PASS.
+- Timed seed replay, native presets, image dimensions, EXR writing through
+  standard write_texture, points→volume→nonempty Maya mesh: PASS.
+- Existing Maya color-set / 2D CUDA / feedback / callback checks: PASS.
+- Python helpers and timeline error/recovery checks: PASS.
+- Headless Bifrost initialization logs include menuSet and missing Cg fragment
+  warnings; integration assertions pass. MayaUSD loading PySide6/Shiboken emits
+  a NumPy 1.x/2.3.3 compatibility warning even with isolated preferences.
+  This environment warning remains unresolved; no NumPy dependency was added.
+  Earlier runs also emitted userSetup/Fabricator messages. Full logs remain in build/.
+
+Reproduction: `scripts/test_maya_interactive.ps1 -Domain grid|surface|volume`,
+`tests/test_maya_spatial.py`, `tests/test_maya_core_features.py`, and
+`tests/run_maya_test.py <legacy-test-name.py>`. Set RD_TEST_PACK and
+RD_TEST_PACKAGE_ROOT to test a specific installed pack/package.
+
+Not claimed: GPU-resident state, Sparse GPU storage, arbitrary topology changes,
+automatic checkpoint/restart UI, cross-hardware bitwise identity, performance
+benchmarks for every new resolution, or arbitrary-mesh one-click UV baking.
+
+The following sections are historical Preview 7 baseline records.
 
 ## Timeline diagnostics follow-up (2026-09-17)
 
@@ -94,7 +135,7 @@ the packaging environment:
 The development baseline additionally requires checking that
 `reaction_diffusion_initialize_volume` and `reaction_diffusion_volume_step` are searchable,
 produce `width * height * depth` values, and expose all three gradient arrays. These new
-operators have not yet been validated in Maya.
+operators were not yet validated at the Preview 7 baseline; see Preview 8 above.
 
 ## Performance interpretation
 

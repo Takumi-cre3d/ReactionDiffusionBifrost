@@ -39,6 +39,19 @@ def main() -> None:
     sys.path.insert(0, str(PACKAGE_ROOT))
     preview = importlib.import_module("reaction_diffusion_bifrost.preview")
     bridge = importlib.import_module("reaction_diffusion_bifrost.bridge")
+    spatial = importlib.import_module("reaction_diffusion_bifrost.spatial")
+    events = importlib.import_module("reaction_diffusion_bifrost.seed_events")
+    for invoke in (
+        lambda: spatial.create_volume_graph(substeps=1.5),
+        lambda: spatial.create_graph('surface',positions=[0,0,0,1,0,0,0,1,0],triangles=[0,1,1.5]),
+        lambda: events.set_events('unused',[dict(frame=1,position=[0,0,0],radius=1,mode=1.5)]),
+    ):
+        try:
+            invoke()
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('Fractional integer input was silently truncated')
 
     flattened = preview._flatten_numbers(((0.0, 0.25), [0.5, (0.75, 1.0)]))
     assert flattened == [0.0, 0.25, 0.5, 0.75, 1.0]
@@ -94,7 +107,7 @@ def main() -> None:
     assert "sizeable=True" in ui_source
     assert "cmds.scrollLayout(childResizable=True" in ui_source
     assert 'label="Create Sample Graph + Visible Pattern"' in ui_source
-    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 7"' in ui_source
+    assert 'title="Reaction Diffusion Controller 0.2.0 Preview 8"' in ui_source
     assert 'label="Create Stateful Playback Graph"' in ui_source
     assert "om.MDGMessage.addForceUpdateCallback(_on_dg_time_changed)" in ui_source
     assert 'event=("timeChanged", _refresh_on_time_changed)' not in ui_source
@@ -142,7 +155,7 @@ def main() -> None:
     hotfix_source = (ROOT / "scripts" / "apply_python_hotfix.ps1").read_text(
         encoding="utf-8"
     )
-    assert "Preview 7 Python update installed successfully" in hotfix_source
+    assert "Preview 8 Python update installed successfully" in hotfix_source
     assert "unsupported Maya 2026 createColorSetWithName" in hotfix_source
     native_header = (ROOT / "native" / "bifrost" / "ReactionDiffusion.h").read_text(
         encoding="utf-8"
@@ -155,7 +168,7 @@ def main() -> None:
         assert state_operator in native_header
         assert state_operator in build_script_source
     manifest_source = (ROOT / "SOURCE_MANIFEST.txt").read_text(encoding="utf-8")
-    assert "distributionVersion=0.2.0-preview7" in manifest_source
+    assert "distributionVersion=0.2.0-preview8" in manifest_source
     assert "tests/test_maya_bifrost_stateful.py" in manifest_source
     assert "tests/test_maya_playback_callback.py" in manifest_source
     print("ReactionDiffusion Maya Python helper tests: PASS")

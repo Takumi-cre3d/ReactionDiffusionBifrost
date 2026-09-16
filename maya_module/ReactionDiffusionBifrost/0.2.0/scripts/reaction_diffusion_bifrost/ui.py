@@ -170,6 +170,25 @@ def _is_stateful_graph(graph: str) -> bool:
     return bool(graph and cmds.objExists(graph) and cmds.objExists(f"{graph}.state"))
 
 
+def _create_spatial_graph(domain):
+    from . import spatial
+    try:
+        options = {"start_frame": float(cmds.playbackOptions(query=True, minTime=True)),
+                   "substeps": cmds.intField(CONTROLS["step_size"], query=True, value=True)}
+        cmds.currentTime(options["start_frame"])
+        if domain == "surface":
+            selected = cmds.ls(selection=True, long=True) or []
+            if not selected:
+                raise ValueError("Select a polygon mesh for surface simulation")
+            created = spatial.create_surface_graph(selected[0], **options)
+        else:
+            created = spatial.create_volume_graph(dimensions=(24,24,24), **options)
+        cmds.textField(CONTROLS["graph"], edit=True, text=created["graph"])
+        _refresh_preview()
+    except (RuntimeError, ValueError) as error:
+        cmds.warning(f"ReactionDiffusion: {error}")
+
+
 def _refresh_on_time_changed(refresh_viewport: bool = True) -> None:
     global _TIME_REFRESH_BUSY, _TIME_REFRESH_ERROR
     if _TIME_REFRESH_BUSY or not CONTROLS.get("graph"):
@@ -307,7 +326,7 @@ def show():
     CONTROLS.clear()
     window = cmds.window(
         WINDOW,
-        title="Reaction Diffusion Controller 0.2.0 Preview 7",
+        title="Reaction Diffusion Controller 0.2.0 Preview 8",
         sizeable=True,
         widthHeight=(480, 720),
     )
@@ -352,6 +371,14 @@ def show():
         height=38,
         command=_create_stateful_graph,
         annotation="Creates a Bifrost Feedback State simulation driven by the Maya timeline.")
+    cmds.button(label="Create Surface Graph from Selected Mesh", command=lambda *_: _create_spatial_graph("surface"))
+    cmds.button(label="Create Volume Graph (24 cubed, Z slice preview)", command=lambda *_: _create_spatial_graph("volume"))
+    from . import presets
+    CONTROLS["preset"] = cmds.optionMenu(label="Pattern preset")
+    for name in presets.PRESETS:
+        cmds.menuItem(label=name)
+    cmds.button(label="Apply Preset", command=lambda *_: presets.apply(
+        _graph_name(), cmds.optionMenu(CONTROLS["preset"],query=True,value=True)))
     cmds.rowLayout(numberOfColumns=4, adjustableColumn=4, columnWidth4=(65, 95, 65, 95))
     cmds.text(label="Width", align="right")
     CONTROLS["width"] = cmds.intField(value=64, minValue=3)

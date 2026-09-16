@@ -1,8 +1,11 @@
 #include "ReactionDiffusionCore.h"
+#include "ReactionDiffusionVolumeCore.h"
+#include "ReactionDiffusionSurfaceCore.h"
 
 #include <cuda_runtime.h>
 
 #include <chrono>
+#include <climits>
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -19,30 +22,31 @@ void require_cuda(cudaError_t result, const char* operation) {
     }
 }
 
-class DeviceBuffer {
+template<class T> class DeviceArray {
 public:
-    DeviceBuffer() = default;
+    DeviceArray() = default;
 
-    explicit DeviceBuffer(std::size_t count) {
+    explicit DeviceArray(std::size_t count) {
         require_cuda(
-            cudaMalloc(reinterpret_cast<void**>(&data_), count * sizeof(float)),
+            cudaMalloc(reinterpret_cast<void**>(&data_), count * sizeof(T)),
             "cudaMalloc");
     }
 
-    DeviceBuffer(const DeviceBuffer&) = delete;
-    DeviceBuffer& operator=(const DeviceBuffer&) = delete;
+    DeviceArray(const DeviceArray&) = delete;
+    DeviceArray& operator=(const DeviceArray&) = delete;
 
-    ~DeviceBuffer() {
+    ~DeviceArray() {
         if (data_) {
             cudaFree(data_);
         }
     }
 
-    float* get() noexcept { return data_; }
+    T* get() noexcept { return data_; }
 
 private:
-    float* data_ = nullptr;
+    T* data_ = nullptr;
 };
+using DeviceBuffer = DeviceArray<float>;
 
 __device__ int wrap_coordinate(int value, int extent) {
     int wrapped = value % extent;
@@ -103,6 +107,32 @@ __device__ float laplacian_grid(
     return result;
 }
 
+__device__ float sample_volume(const float* values, int x, int y, int z,
+    int width, int height, int depth, int boundary, float fixed) {
+    if (boundary == static_cast<int>(BoundaryMode::Periodic)) {
+        x = wrap_coordinate(x, width); y = wrap_coordinate(y, height);
+        z = wrap_coordinate(z, depth);
+    } else if (boundary == static_cast<int>(BoundaryMode::NoFlux)) {
+        x = clamp_coordinate(x, width); y = clamp_coordinate(y, height);
+        z = clamp_coordinate(z, depth);
+    } else if (x < 0 || y < 0 || z < 0 || x >= width || y >= height || z >= depth) {
+        return fixed;
+    }
+    return values[(static_cast<std::size_t>(z) * height + y) * width + x];
+}
+
+__device__ float laplacian_volume(const float* values, int x, int y, int z,
+    int w, int h, int d, int boundary, float fixed) {
+    float result = -sample_volume(values, x, y, z, w, h, d, boundary, fixed);
+    result += sample_volume(values, x-1, y, z, w, h, d, boundary, fixed) * (1.0f/6.0f);
+    result += sample_volume(values, x+1, y, z, w, h, d, boundary, fixed) * (1.0f/6.0f);
+    result += sample_volume(values, x, y-1, z, w, h, d, boundary, fixed) * (1.0f/6.0f);
+    result += sample_volume(values, x, y+1, z, w, h, d, boundary, fixed) * (1.0f/6.0f);
+    result += sample_volume(values, x, y, z-1, w, h, d, boundary, fixed) * (1.0f/6.0f);
+    result += sample_volume(values, x, y, z+1, w, h, d, boundary, fixed) * (1.0f/6.0f);
+    return result;
+}
+
 __global__ void gray_scott_step_kernel(
     const float* concentration_a,
     const float* concentration_b,
@@ -110,6 +140,7 @@ __global__ void gray_scott_step_kernel(
     float* next_b,
     int width,
     int height,
+    int depth,
     float feed_rate,
     float kill_rate,
     float diffusion_a,
@@ -120,19 +151,22 @@ __global__ void gray_scott_step_kernel(
     const std::size_t index =
         static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
     const std::size_t count =
-        static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+        static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * depth;
     if (index >= count) {
         return;
     }
 
     const int x = static_cast<int>(index % static_cast<std::size_t>(width));
-    const int y = static_cast<int>(index / static_cast<std::size_t>(width));
+    const int y = static_cast<int>((index / width) % height);
+    const int z = static_cast<int>(index / (static_cast<std::size_t>(width) * height));
     const float a = concentration_a[index];
     const float b = concentration_b[index];
-    const float lap_a = laplacian_grid(
-        concentration_a, x, y, width, height, boundary_mode, 1.0f);
-    const float lap_b = laplacian_grid(
-        concentration_b, x, y, width, height, boundary_mode, 0.0f);
+    const float lap_a = depth == 1 ? laplacian_grid(
+        concentration_a, x, y, width, height, boundary_mode, 1.0f) : laplacian_volume(
+        concentration_a, x, y, z, width, height, depth, boundary_mode, 1.0f);
+    const float lap_b = depth == 1 ? laplacian_grid(
+        concentration_b, x, y, width, height, boundary_mode, 0.0f) : laplacian_volume(
+        concentration_b, x, y, z, width, height, depth, boundary_mode, 0.0f);
     const float reaction = a * b * b;
     float output_a = a + (
         diffusion_a * lap_a - reaction + feed_rate * (1.0f - a)) * time_step;
@@ -158,10 +192,11 @@ bool cuda_device_available() noexcept {
     return device_count > 0;
 }
 
-StepResult step_cuda_2d(
-    GridState& state,
+template<class State>
+StepResult step_cuda_dense(
+    State& state,
     const Parameters& parameters,
-    const std::vector<SeedSample>& seeds,
+    int depth,
     BoundaryMode boundary,
     int substeps,
     Backend requested_backend) {
@@ -172,7 +207,10 @@ StepResult step_cuda_2d(
         throw std::invalid_argument("substeps must be zero or greater.");
     }
     Detail::validate_parameters(parameters);
-    apply_seeds(state, seeds, boundary);
+    if (state.width > INT_MAX || state.height > INT_MAX || depth < 1 ||
+        state.size() > static_cast<std::size_t>(INT_MAX)) {
+        throw std::invalid_argument("CUDA dense grid exceeds supported index range.");
+    }
 
     const auto started = std::chrono::steady_clock::now();
     if (substeps > 0) {
@@ -205,6 +243,7 @@ StepResult step_cuda_2d(
                 output_b,
                 static_cast<int>(state.width),
                 static_cast<int>(state.height),
+                depth,
                 parameters.feed_rate,
                 parameters.kill_rate,
                 parameters.diffusion_a,
@@ -236,6 +275,71 @@ StepResult step_cuda_2d(
         ? "auto_selected_cuda"
         : "cuda";
     return result;
+}
+
+__global__ void surface_kernel(const float* a, const float* b, float* na, float* nb,
+    const int* offsets, const int* neighbours, const float* weights, int count,
+    float feed, float kill, float da, float db, float dt, bool clamp) {
+    const int i=blockIdx.x*blockDim.x+threadIdx.x;
+    if (i>=count) return;
+    float la=0,lb=0;
+    for (int e=offsets[i];e<offsets[i+1];++e) {
+        la+=weights[e]*(a[neighbours[e]]-a[i]);
+        lb+=weights[e]*(b[neighbours[e]]-b[i]);
+    }
+    const float reaction=a[i]*b[i]*b[i];
+    float va=a[i]+(da*la-reaction+feed*(1-a[i]))*dt;
+    float vb=b[i]+(db*lb+reaction-(feed+kill)*b[i])*dt;
+    na[i]=clamp ? fminf(1,fmaxf(0,va)) : va;
+    nb[i]=clamp ? fminf(1,fmaxf(0,vb)) : vb;
+}
+
+StepResult step_cuda_surface(const SurfaceTopology& mesh, SurfaceState& state,
+    const Parameters& p, int substeps, Backend requested) {
+    const auto start=std::chrono::steady_clock::now();
+    const auto count=state.a.size(), bytes=count*sizeof(float);
+    DeviceBuffer a(count),b(count),na(count),nb(count),weights(mesh.weights.size());
+    DeviceArray<int> offsets(mesh.offsets.size()), neighbours(mesh.neighbours.size());
+    require_cuda(cudaMemcpy(a.get(),state.a.data(),bytes,cudaMemcpyHostToDevice),"surface A upload");
+    require_cuda(cudaMemcpy(b.get(),state.b.data(),bytes,cudaMemcpyHostToDevice),"surface B upload");
+    require_cuda(cudaMemcpy(weights.get(),mesh.weights.data(),mesh.weights.size()*sizeof(float),cudaMemcpyHostToDevice),"surface weights upload");
+    require_cuda(cudaMemcpy(offsets.get(),mesh.offsets.data(),mesh.offsets.size()*sizeof(int),cudaMemcpyHostToDevice),"surface offsets upload");
+    require_cuda(cudaMemcpy(neighbours.get(),mesh.neighbours.data(),mesh.neighbours.size()*sizeof(int),cudaMemcpyHostToDevice),"surface neighbours upload");
+    float *ca=a.get(),*cb=b.get(),*oa=na.get(),*ob=nb.get();
+    const int splits=surface_splits(mesh,p);
+    for (int step=0;step<substeps*splits;++step) {
+        surface_kernel<<<static_cast<unsigned>((count+255)/256),256>>>(ca,cb,oa,ob,
+            offsets.get(),neighbours.get(),weights.get(),static_cast<int>(count),
+            p.feed_rate,p.kill_rate,p.diffusion_a,p.diffusion_b,p.time_step/splits,p.clamp_concentrations);
+        require_cuda(cudaGetLastError(),"surface kernel");
+        std::swap(ca,oa); std::swap(cb,ob);
+    }
+    require_cuda(cudaDeviceSynchronize(),"surface synchronize");
+    require_cuda(cudaMemcpy(state.a.data(),ca,bytes,cudaMemcpyDeviceToHost),"surface A download");
+    require_cuda(cudaMemcpy(state.b.data(),cb,bytes,cudaMemcpyDeviceToHost),"surface B download");
+    StepResult result;
+    result.requested_backend=requested; result.actual_backend=Backend::CUDA; result.substeps=substeps;
+    result.status=requested==Backend::Auto ? "auto_selected_cuda" : "cuda";
+    result.elapsed_milliseconds=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();
+    return result;
+}
+
+StepResult step_cuda_2d(GridState& state, const Parameters& parameters,
+    const std::vector<SeedSample>& seeds, BoundaryMode boundary, int substeps,
+    Backend requested) {
+    Detail::validate_parameters(parameters);
+    if (substeps < 0) throw std::invalid_argument("Negative substeps.");
+    apply_seeds(state, seeds, boundary);
+    return step_cuda_dense(state, parameters, 1, boundary, substeps, requested);
+}
+
+StepResult step_cuda_volume(VolumeState& state, const Parameters& parameters,
+    const std::vector<VolumeSeedSample>& seeds, BoundaryMode boundary, int substeps,
+    Backend requested) {
+    Detail::validate_parameters(parameters);
+    if (substeps < 0 || state.depth > INT_MAX) throw std::invalid_argument("Invalid CUDA volume dimensions or substeps.");
+    apply_volume_seeds(state, seeds, boundary);
+    return step_cuda_dense(state, parameters, static_cast<int>(state.depth), boundary, substeps, requested);
 }
 
 } // namespace ReactionDiffusionCore

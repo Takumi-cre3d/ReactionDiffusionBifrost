@@ -157,6 +157,30 @@ def create_preview_graph(
         raise
 
 
+def add_points_output(graph, pattern, dimensions=(1, 1, 1), positions=None):
+    """Use native geometry so Maya's viewport consumes the simulation output."""
+    samples = _add_node_at(graph, "/", NAMESPACE, "reaction_diffusion_samples")
+    points = _add_node_at(graph, "/", "Geometry::Points", "construct_points")
+    cmds.vnnConnect(graph, pattern, samples+".pattern")
+    for port, value in zip(("width", "height", "depth"), dimensions):
+        _set_default(graph, samples, port, str(value))
+    if positions:
+        cmds.vnnConnect(graph, positions, samples+".positions")
+    _set_default(graph, samples, "threshold", "0.05")
+    _set_default(graph, samples, "point_radius", "0.01")
+    cmds.vnnConnect(graph, samples+".point_position", points+".point_position")
+    geometry = points+".points"
+    for name, source in (("point_size", "point_size"), ("point_pattern", "point_pattern")):
+        prop = _add_node_at(graph, "/", "Geometry::Properties", "set_geo_property")
+        _set_default(graph, prop, "property", name)
+        cmds.vnnConnect(graph, geometry, prop+".geometry")
+        cmds.vnnConnect(graph, samples+"."+source, prop+".data")
+        geometry = prop+".out_geometry"
+    cmds.vnnNode(graph, "/output", createInputPort=("points", "Object"))
+    cmds.vnnConnect(graph, geometry, "/output.points")
+    return samples, geometry
+
+
 def create_stateful_preview_graph(
     width: int = 64,
     height: int = 64,
@@ -201,6 +225,8 @@ def create_stateful_preview_graph(
             cmds.vnnCompound(
                 graph, simulation, setPortDataType=(port, "array<float>"))
         step = _add_node_at(graph, simulation, NAMESPACE, STATE_STEP_TYPE)
+        from .seed_events import connect_events
+        connect_events(graph, step)
         outputs = _add_node_at(graph, "/", NAMESPACE, STATE_OUTPUTS_TYPE)
 
         for node in (initialize, step, outputs):
@@ -263,6 +289,7 @@ def create_stateful_preview_graph(
             source_port = "out_state" if port == "state" else port
             _connect(graph, source_node, source_port, f"/output.{port}")
 
+        samples, points_source = add_points_output(graph, outputs+".pattern", (width, height, 1))
         cmds.vnnChangeBracket(graph, close=True)
         bracket_open = False
         cmds.dgdirty(graph)
@@ -273,6 +300,8 @@ def create_stateful_preview_graph(
             "simulation_node": simulation,
             "step_node": step,
             "outputs_node": outputs,
+            "samples_node": samples,
+            "points_source": points_source,
         }
     except Exception:
         if bracket_open and cmds.objExists(graph):

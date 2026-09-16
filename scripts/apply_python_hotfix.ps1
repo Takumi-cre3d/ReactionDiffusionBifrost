@@ -22,8 +22,8 @@ if (-not (Test-Path $packConfig)) {
 }
 $operatorDefinition = Join-Path $versionRoot "bifrost\ReactionDiffusion-0.2.0\json\ReactionDiffusion\ReactionDiffusion.json"
 if (-not (Test-Path $operatorDefinition) -or
-    -not [IO.File]::ReadAllText($operatorDefinition).Contains("reaction_diffusion_state_step")) {
-    throw "The installed native pack predates Preview 5 Feedback State. Run install_all.ps1 instead."
+    -not [IO.File]::ReadAllText($operatorDefinition).Contains("reaction_diffusion_mesh_data")) {
+    throw "Preview 8 requires the updated native pack. Run install_all.ps1 instead."
 }
 
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -86,6 +86,6 @@ if (-not $installedGraphSetupText.Contains("reaction_diffusion_state_step")) {
 }
 
 & (Join-Path $PSScriptRoot "verify_install.ps1") -MayaVersion $MayaVersion
-Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 7 Python update installed successfully."
+Write-Host "ReactionDiffusionBifrost 0.2.0 Preview 8 Python update installed successfully."
 Write-Host "Python backup: $backupDestination"
 Write-Host "The existing native Bifrost pack was preserved."

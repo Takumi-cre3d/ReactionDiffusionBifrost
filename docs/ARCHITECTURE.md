@@ -34,11 +34,11 @@ Native Operatorは静的／グローバルな可変Stateを持ちません。Sta
 
 Gray–Scott式を陽Euler法で積分します。2Dラプラシアンは参照Web版と同じ、center `-1.0`、上下左右 `0.2`、対角 `0.05`の9点Stencilです。WebGL版との差異を減らすため、既定で各Step後のA/Bを`[0, 1]`へclampします。
 
-## 今後の空間表現
+## 空間表現
 
 - Grid: 密な2D配列。参照実装とUVワークフローに使用
 - Volume: `((z * height) + y) * width + x`の密な3D配列を参照実装に使用。正規化6近傍Stencilで計算し、Operator境界を変えずSparse表現へ移行可能にする
-- Surface: メッシュ隣接とcotangent weightを前計算し、濃度Stateとトポロジキャッシュを分離する
+- Surface: メッシュ隣接とcotangent weightを構築し、頂点番号に対応した濃度Stateを再利用する。現状は毎呼び出し再構築し、永続キャッシュは未実装
 
 いずれも濃度State、pattern、空間勾配を共通概念として公開します。
 

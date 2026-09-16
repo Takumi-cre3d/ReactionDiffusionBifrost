@@ -1,5 +1,5 @@
 name=ReactionDiffusionBifrost
-distributionVersion=0.2.0-preview7
+distributionVersion=0.2.0-preview8
 productVersion=0.2.0
 packVersion=0.2.0
 mayaModuleVersion=0.2.0
@@ -8,6 +8,8 @@ bifrostValidatedBaseline=2.15.0.0
 
 native/core/ReactionDiffusionCore.h
 native/core/ReactionDiffusionVolumeCore.h
+native/core/ReactionDiffusionSurfaceCore.h
+native/tools/rd_surface_tests.cpp
 native/cuda/ReactionDiffusionCuda.cu
 native/bifrost/ReactionDiffusion.h
 native/bifrost/ReactionDiffusion.cpp
@@ -23,6 +25,10 @@ maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/pr
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/bridge.py
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/graph_setup.py
 maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/ui.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/spatial.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/seed_events.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/presets.py
+maya_module/ReactionDiffusionBifrost/0.2.0/scripts/reaction_diffusion_bifrost/outputs.py
 
 scripts/install_all.ps1
 scripts/install_maya_module.ps1
@@ -34,6 +40,14 @@ tests/test_maya_preview_color_set.py
 tests/test_maya_bifrost_cuda.py
 tests/test_maya_bifrost_stateful.py
 tests/test_maya_playback_callback.py
+tests/test_maya_spatial.py
+tests/test_maya_core_features.py
+tests/test_maya_interactive.py
+tests/test_timeline_errors.py
+scripts/test_maya_interactive.ps1
+scripts/install_prebuilt.ps1
+tests/run_maya_test.py
+docs/CORE_FUNCTIONS.md
 
 README_JA.md
 VALIDATION_REPORT.md
@@ -47,7 +61,7 @@ Notes:
 - bridge.py writes editable Painter arrays to unconnected native operator defaults via vnnNode.
 - Preview 2 adds a resizable scroll layout and moves Refresh Existing Output above the fold.
 - Preview 5 adds explicit packed A/B State operators and a timeline-driven Bifrost Feedback graph.
-- The development baseline adds experimental dense 3D volume CPU operators; Maya/Bifrost runtime validation is pending.
+- Preview 8 adds CUDA volume/surface solvers, live mesh inputs, seeds and native output adapters.
 - Preview 3 fixes Maya 2026 color-set creation and preserves installed native packs during Python reinstalls.
 - Preview 3 adds optional CUDA detection, CUDA-first Auto dispatch and an experimental 2D ping-pong kernel.
 - Preview 4 adds one-click native graph and visible-pattern creation.

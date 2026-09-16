@@ -125,6 +125,7 @@ Copy-Item -Force -Path (Join-Path $packageRoot "native\bifrost\ReactionDiffusion
 Copy-Item -Force -Path (Join-Path $packageRoot "native\bifrost\ReactionDiffusion.h") -Destination $operatorHeader.FullName
 Copy-Item -Force -Path (Join-Path $packageRoot "native\core\ReactionDiffusionCore.h") -Destination (Join-Path $operatorDir "ReactionDiffusionCore.h")
 Copy-Item -Force -Path (Join-Path $packageRoot "native\core\ReactionDiffusionVolumeCore.h") -Destination (Join-Path $operatorDir "ReactionDiffusionVolumeCore.h")
+Copy-Item -Force -Path (Join-Path $packageRoot "native\core\ReactionDiffusionSurfaceCore.h") -Destination (Join-Path $operatorDir "ReactionDiffusionSurfaceCore.h")
 if ($EnableCuda) {
     Copy-Item -Force -Path (Join-Path $packageRoot "native\cuda\ReactionDiffusionCuda.cu") -Destination (Join-Path $operatorDir "ReactionDiffusionCuda.cu")
 }
@@ -188,6 +189,7 @@ if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     target_sources($operatorTarget PRIVATE ReactionDiffusionCuda.cu)
     target_compile_definitions($operatorTarget PRIVATE RD_HAS_CUDA=1)
+    target_compile_options($operatorTarget PRIVATE `$<`$<COMPILE_LANGUAGE:CUDA>:--fmad=false>)
     set_target_properties(
         $operatorTarget
         PROPERTIES
@@ -336,7 +338,15 @@ $requiredExports = @(
     "reaction_diffusion_state_step",
     "reaction_diffusion_state_outputs",
     "reaction_diffusion_initialize_volume",
-    "reaction_diffusion_volume_step"
+    "reaction_diffusion_volume_step",
+    "reaction_diffusion_surface_step",
+    "reaction_diffusion_pack_state",
+    "reaction_diffusion_unpack_state",
+    "reaction_diffusion_preset",
+    "reaction_diffusion_seed_events",
+    "reaction_diffusion_samples",
+    "reaction_diffusion_pixels",
+    "reaction_diffusion_mesh_data"
 )
 foreach ($requiredExport in $requiredExports) {
     if (-not $exportTable.Contains($requiredExport)) {

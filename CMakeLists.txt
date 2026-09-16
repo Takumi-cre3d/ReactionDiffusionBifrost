@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(RD_ENABLE_OPENMP "Enable the CPU OpenMP backend" ON)
-option(RD_ENABLE_CUDA "Build the optional 2D CUDA backend when nvcc is available" ON)
+option(RD_ENABLE_CUDA "Build CUDA backends when nvcc is available" ON)
 option(RD_REQUIRE_CUDA "Fail configuration when RD_ENABLE_CUDA is ON but nvcc is unavailable" OFF)
 set(
     RD_CUDA_ARCHITECTURES
@@ -39,6 +39,8 @@ if(RD_ENABLE_CUDA)
                 "${CMAKE_CURRENT_SOURCE_DIR}/native/core"
         )
         target_compile_definitions(reaction_diffusion_cuda PRIVATE RD_HAS_CUDA=1)
+        # Match the CPU reference's separate float multiply/add rounding.
+        target_compile_options(reaction_diffusion_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--fmad=false>)
         set_target_properties(
             reaction_diffusion_cuda
             PROPERTIES
@@ -90,3 +92,6 @@ target_link_libraries(rd_reference_image PRIVATE reaction_diffusion_core)
 
 enable_testing()
 add_test(NAME reaction_diffusion_core COMMAND rd_core_tests)
+add_executable(rd_surface_tests native/tools/rd_surface_tests.cpp)
+target_link_libraries(rd_surface_tests PRIVATE reaction_diffusion_core)
+add_test(NAME reaction_diffusion_surface COMMAND rd_surface_tests)

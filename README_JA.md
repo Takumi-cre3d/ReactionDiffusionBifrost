@@ -1,4 +1,11 @@
-# ReactionDiffusionBifrost 0.2.0 Preview 7
+# ReactionDiffusionBifrost 0.2.0 Preview 8
+
+## Preview 8 — コア機能
+
+2D・メッシュ表面・3D体積のCPU/CUDA Solver、共通Seed操作、5プリセット、
+変形メッシュ入力、Feedback再生、標準Bifrostのポイント／ボリューム／メッシュ／
+画像・テクスチャ出力に対応しました。操作例と制限は[コア機能ガイド](docs/CORE_FUNCTIONS.md)を参照してください。
+旧PreviewからはPythonだけでなくNative Packも更新してください。
 
 Maya 2026 / Bifrost 2.15向けのGray–Scott反応拡散ツールです。
 ネイティブBifrost Solverに加え、Seed Painter、Painter→Bifrost同期、
@@ -62,9 +69,7 @@ Preview 1から引き続き、次の機能を含みます。
 - 表示専用コントラスト正規化
 - PainterデータとPreviewメッシュを分離し、Preview削除時もストロークを保持
 
-開発リポジトリでは次期機能として、密な3D voxel配列を扱う実験的CPU参照実装と
-`reaction_diffusion_initialize_volume` / `reaction_diffusion_volume_step`を追加しています。
-この2ノードはまだMaya 2026 / Bifrost 2.15上での実機検証前です。
+Preview 8ではVolume・SurfaceのNative OperatorをMaya 2026 / Bifrost 2.15で検証しています。
 
 数値計算は引き続きC++ネイティブBifrost Operatorで行います。Pythonは
 ポート設定、評価要求、頂点カラー表示だけを担当します。
@@ -216,20 +221,19 @@ graph = rd.create_stateful_preview_graph(
 
 ## 現在の制限
 
-- 検証済みSolver領域は2D / UVグリッドです。3D Volumeはdense CPU実装の実機検証前、メッシュ表面Laplace–Beltramiは未実装です。
+- 検証対象はMaya 2026 / Bifrost 2.15、Windows、CUDA 12.6 / RTX 4070 Ti SUPERです。
 - 2D CUDA kernelはCUDA Toolkit 12.6、RTX 4070 Ti SUPER、Maya 2026 / Bifrost 2.15で実機検証済みです。CUDAを利用できない環境ではCPUへfallbackします。
 - シードポートが別ノードから接続済みの場合、UIは上書きせず警告を返します。
-- Stateful Graphの初期版は中央Seedで開始します。Painterのフレーム別注入は次段階です。
+- Stateful Painterは次フレームへSeedを登録します。過去のSeed編集後は開始フレームから再生してください。
 - Packed StateはBifrost Feedback化済みですが、CUDA bufferはまだOperator呼び出し間でGPU常駐せずHost転送が残ります。
-- PreviewはMayaの頂点カラー表示で、入力メッシュへのUVテクスチャ投影は次段階です。
-- Deforming SurfaceやUVシーム接続は未実装です。
+- Pythonプレビューは補助表示です。画像・テクスチャ出力は標準Bifrostノードへ接続できますが、任意メッシュへのUVベイクのワンクリックUIはありません。
+- Surfaceは頂点番号と接続が固定の変形に対応します。トポロジ変更時はStateをリセットしてください。
 
 ## 次段階
 
-1. Painter SeedのStateful Graphへのフレーム別注入
-2. `pattern`の入力メッシュUVへの直接表示／ベイク
-3. CUDA A/B StateのGPU常駐化とHost転送の削減
-4. Surface SolverとVolume Solver
+1. CUDA A/B StateのGPU常駐化とHost転送の削減
+2. Sparse Volumeと大規模Surfaceの性能最適化
+3. UVベイク・キャッシュ操作のUI整備
 
 ## ビルド安全策
 
