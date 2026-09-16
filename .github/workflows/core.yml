@@ -29,3 +29,5 @@ jobs:
           python-version: "3.11"
       - name: Maya-independent regression tests
         run: python tests/test_python_tools.py
+      - name: Timeline failure and recovery
+        run: python tests/test_timeline_errors.py

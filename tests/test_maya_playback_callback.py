@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import maya.standalone
 
@@ -39,34 +40,36 @@ def main() -> None:
         )
         graph = created["graph"]
         observed = {}
-        original_refresh = ui._refresh_on_time_changed
+        original_update = preview.update_preview
 
-        def refresh_from_callback(refresh_viewport=True):
+        def record_update(*args, **kwargs):
             frame = float(cmds.currentTime(query=True))
-            preview.update_preview(
-                graph,
-                width,
-                height,
-                normalize=True,
-                refresh_viewport=bool(refresh_viewport),
-            )
+            result = original_update(*args, **kwargs)
             observed[frame] = preview.read_pattern(graph)
+            return result
 
-        ui._refresh_on_time_changed = refresh_from_callback
+        # Standalone has no UI controls. Substitute only their input values;
+        # preserve the production refresh callback, guard and error handling.
+        ui.CONTROLS["graph"] = "testGraphField"
         try:
-            ui._install_time_callback()
-            refresh_from_callback(refresh_viewport=False)
-            for frame in (1, 2, 3):
-                cmds.currentTime(frame, update=True)
-            cmds.currentTime(0, update=True)
+            with patch.object(cmds, "textField", return_value=graph), \
+                    patch.object(ui, "_simulation_settings", return_value={
+                        "width": width, "height": height}), \
+                    patch.object(preview, "update_preview", side_effect=record_update):
+                ui._install_time_callback()
+                ui._refresh_on_time_changed(refresh_viewport=False)
+                initial_pattern = list(observed[0.0])
+                for frame in (1, 2, 3):
+                    cmds.currentTime(frame, update=True)
+                cmds.currentTime(0, update=True)
         finally:
             ui._remove_time_callback()
-            ui._refresh_on_time_changed = original_refresh
+            ui.CONTROLS.clear()
 
         delivered_frames = set(observed)
         if not {0.0, 1.0, 2.0, 3.0}.issubset(delivered_frames):
             raise AssertionError(
-                f"DG time callback missed frames; observed {observed!r}."
+                f"DG time callback missed frames; observed {sorted(observed)!r}."
             )
         difference_01 = max(
             abs(a - b) for a, b in zip(observed[0.0], observed[1.0])
@@ -77,15 +80,14 @@ def main() -> None:
         if difference_01 <= 1.0e-6 or difference_12 <= 1.0e-6:
             raise AssertionError("Pattern did not advance through timeline time changes.")
 
-        # The final jump to frame zero overwrites the initial observation. It
-        # must still be the initialized pattern, not the cached frame-three
-        # result. The centered seed has a peak value of exactly one.
-        if abs(max(observed[0.0]) - 1.0) > 1.0e-7:
+        reset_error = max(abs(a - b) for a, b in zip(initial_pattern, observed[0.0]))
+        if reset_error > 1.0e-7:
             raise AssertionError("Frame-zero playback reset did not restore the initial seed.")
         print("ReactionDiffusion playback DG callback integration: PASS")
         print(f"observedFrames={sorted(observed)}")
         print(f"frameDifference01={difference_01:.7f}")
         print(f"frameDifference12={difference_12:.7f}")
+        print(f"resetMaximumError={reset_error:.7f}")
     finally:
         if not already:
             maya.standalone.uninitialize()

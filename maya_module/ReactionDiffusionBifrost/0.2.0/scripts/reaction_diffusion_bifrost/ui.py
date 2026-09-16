@@ -14,6 +14,7 @@ WINDOW = "reactionDiffusionBifrostWindow"
 CONTROLS = {}
 _TIME_REFRESH_BUSY = False
 _TIME_CALLBACK_ID = None
+_TIME_REFRESH_ERROR = None
 
 
 def _status(message: str) -> None:
@@ -170,7 +171,7 @@ def _is_stateful_graph(graph: str) -> bool:
 
 
 def _refresh_on_time_changed(refresh_viewport: bool = True) -> None:
-    global _TIME_REFRESH_BUSY
+    global _TIME_REFRESH_BUSY, _TIME_REFRESH_ERROR
     if _TIME_REFRESH_BUSY or not CONTROLS.get("graph"):
         return
     graph_text = cmds.textField(CONTROLS["graph"], query=True, text=True).strip()
@@ -188,12 +189,15 @@ def _refresh_on_time_changed(refresh_viewport: bool = True) -> None:
             refresh_viewport=refresh_viewport,
         )
         backend = cmds.getAttr(f"{graph_text}.backend_used")
+        _TIME_REFRESH_ERROR = None
         _status(
             f"State frame {frame:g}: {mesh}    {backend}")
-    except (RuntimeError, ValueError):
-        # Timeline callbacks must not interrupt playback. Full errors remain
-        # available from explicit Refresh/Step operations.
-        pass
+    except (RuntimeError, ValueError) as exception:
+        message = f"Timeline preview failed for {graph_text}: {exception}"
+        _status(message)
+        if message != _TIME_REFRESH_ERROR:
+            cmds.warning(f"ReactionDiffusion: {message}")
+            _TIME_REFRESH_ERROR = message
     finally:
         _TIME_REFRESH_BUSY = False
 

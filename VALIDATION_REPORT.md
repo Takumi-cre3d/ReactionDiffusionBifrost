@@ -1,5 +1,20 @@
 # ReactionDiffusionBifrost 0.2.0 Preview 7 Validation
 
+## Timeline diagnostics follow-up (2026-09-17)
+
+- Added visible timeline errors with repeated-warning suppression and recovery.
+- Identical failure/recovery regression: fails before the change, passes after.
+- The Maya callback test now runs the production UI refresh function; only UI
+  input values are substituted because standalone Maya has no interactive UI.
+- Frames 0→1→2→3→0: PASS; Pattern differences remain `0.4157934` and
+  `0.0891801`; reset compares the entire initial array, maximum error `0.0`.
+- Interactive playback remains unverified. `currentTime` callback delivery is
+  not evidence that the Play button works; previous playback claims exceeded
+  the tested conditions. CI checks do not include interactive Maya playback.
+- Maya startup emitted existing userSetup/menu initialization errors; the
+  integration assertions completed successfully. Full local log:
+  `build/timeline-production.log` (ignored).
+
 ## Automated checks in this distribution
 
 - C++ Gray–Scott core unit tests
